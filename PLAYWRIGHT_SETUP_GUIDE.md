@@ -34,7 +34,7 @@ Trước khi bắt đầu, đảm bảo máy tính của bạn đã cài đặt:
 ### Bước 2.2: Cài Đặt Playwright Test Framework
 Cài đặt thư viện `@playwright/test` vào `devDependencies`:
 ```bash
-npm install -D @playwright/test
+npm install -D @playwright/test dotenv
 ```
 
 ### Bước 2.3: Tải Trình Duyệt Thực Thi Kiểm Thử (Browsers)
@@ -54,6 +54,8 @@ testing_prj/
 │   └── example.spec.ts              # Kịch bản kiểm thử mẫu cho SauceDemo
 ├── playwright-report/               # Báo cáo kết quả kiểm thử định dạng HTML (sinh ra sau khi test)
 ├── test-results/                    # Chứa screenshots, videos, trace khi test thất bại
+├── .env                             # Biến môi trường cục bộ (chứa user/pass, không push lên git)
+├── .env.example                     # Mẫu biến môi trường cho team/CI tham khảo
 ├── playwright.config.ts             # File cấu hình trung tâm của Playwright
 ├── package.json                     # Quản lý dependencies và các script chạy lệnh
 ├── tsconfig.json                    # Cấu hình TypeScript
@@ -68,6 +70,10 @@ File cấu hình [playwright.config.ts](file:///d:/testing_prj/playwright.config
 
 ```typescript
 import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+
+// Đọc cấu hình từ file .env
+dotenv.config();
 
 export default defineConfig({
   // Thư mục chứa các test suites
@@ -149,10 +155,13 @@ test.describe('SauceDemo Login Flow', () => {
 
   // Test case 2: Kiểm tra đăng nhập thành công
   test('should login successfully with standard user', async ({ page }) => {
+    const username = process.env.SAUCE_USERNAME!;
+    const password = process.env.SAUCE_PASSWORD!;
+
     await page.goto('/');
 
-    await page.fill('[data-test="username"]', 'standard_user');
-    await page.fill('[data-test="password"]', 'secret_sauce');
+    await page.fill('[data-test="username"]', username);
+    await page.fill('[data-test="password"]', password);
     await page.click('[data-test="login-button"]');
 
     // Kiểm tra URL và tiêu đề trang Inventory

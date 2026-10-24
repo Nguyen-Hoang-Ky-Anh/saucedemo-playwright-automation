@@ -11,10 +11,13 @@ test.describe('SauceDemo Login Flow', () => {
   });
 
   test('should login successfully with standard user', async ({ page }) => {
+    const username = process.env.SAUCE_USERNAME!;
+    const password = process.env.SAUCE_PASSWORD!;
+
     await page.goto('/');
 
-    await page.fill('[data-test="username"]', 'standard_user');
-    await page.fill('[data-test="password"]', 'secret_sauce');
+    await page.fill('[data-test="username"]', username);
+    await page.fill('[data-test="password"]', password);
     await page.click('[data-test="login-button"]');
 
     await expect(page).toHaveURL(/.*inventory.html/);
