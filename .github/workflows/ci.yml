@@ -29,6 +29,9 @@ jobs:
 
       - name: Run Playwright Tests
         run: npx playwright test
+        env:
+          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+          SAUCE_PASSWORD: ${{ secrets.SAUCE_PASSWORD }}
 
       - name: Upload Playwright Report (Tùy chọn)
         # Bước này giúp bạn tải file báo cáo lỗi về xem nếu test bị failed (đỏ)
