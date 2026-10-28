@@ -31,6 +31,15 @@ export class InventoryPage extends BasePage {
   }
 
   /**
+   * Xóa sản phẩm khỏi giỏ hàng theo data-test identifier
+   * @param itemName Tên nhận diện nút remove
+   * (ví dụ: 'remove-sauce-labs-backpack')
+   */
+  async removeItemFromCart(itemName: string) {
+    await this.page.locator(`[data-test="${itemName}"]`).click();
+  }
+
+  /**
    * Nhấp mở giỏ hàng
    */
   async goToCart() {
@@ -42,5 +51,10 @@ export class InventoryPage extends BasePage {
    */
   async getItemCount(): Promise<number> {
     return this.inventoryItems.count();
+  }
+
+  /** Lấy nút của sản phẩm theo data-test (để test tự kiểm tra) */
+  getProductButton(itemName: string): Locator {
+    return this.page.locator(`[data-test="${itemName}"]`);
   }
 }

@@ -1,5 +1,6 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
+import { TEST_USERS } from '../data/constants';
 
 export class LoginPage extends BasePage {
   // Locators tuân thủ quy chuẩn: data-test và camelCase
@@ -26,12 +27,9 @@ export class LoginPage extends BasePage {
   /**
    * Điền thông tin tài khoản và đăng nhập
    */
-  async login(username?: string, password?: string) {
-    const user = username ?? process.env.SAUCE_USERNAME!;
-    const pass = password ?? process.env.SAUCE_PASSWORD!;
-
-    if (user) await this.usernameInput.fill(user);
-    if (pass) await this.passwordInput.fill(pass);
+  async login(username = TEST_USERS.STANDARD.username, password = TEST_USERS.STANDARD.password) {
+    await this.usernameInput.fill(username);
+    await this.passwordInput.fill(password);
     await this.loginButton.click();
   }
 
