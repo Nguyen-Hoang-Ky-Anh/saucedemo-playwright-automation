@@ -25,12 +25,41 @@ export class LoginPage extends BasePage {
   }
 
   /**
+   * Điền tên đăng nhập
+   */
+  async fillUsername(username: string) {
+    await this.usernameInput.fill(username);
+  }
+
+  /**
+   * Điền mật khẩu
+   */
+  async fillPassword(password: string) {
+    await this.passwordInput.fill(password);
+  }
+
+  /**
+   * Nhấp nút Login
+   */
+  async clickLogin() {
+    await this.loginButton.click();
+  }
+
+  /**
    * Điền thông tin tài khoản và đăng nhập
    */
-  async login(username = TEST_USERS.STANDARD.username, password = TEST_USERS.STANDARD.password) {
-    await this.usernameInput.fill(username);
-    await this.passwordInput.fill(password);
-    await this.loginButton.click();
+  async login(username?: string, password?: string) {
+    if (username !== undefined) {
+      await this.fillUsername(username);
+    } else {
+      await this.fillUsername(TEST_USERS.STANDARD.username);
+    }
+    if (password !== undefined) {
+      await this.fillPassword(password);
+    } else {
+      await this.fillPassword(TEST_USERS.STANDARD.password);
+    }
+    await this.clickLogin();
   }
 
   /**
