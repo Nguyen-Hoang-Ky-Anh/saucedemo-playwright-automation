@@ -1,7 +1,7 @@
 import type { Page, Locator } from '@playwright/test';
-import { test, expect } from '../../fixtures/test.fixture';
-import { toCents } from '../../utils/common-helpers';
-import { addToCartId, CHECKOUT_INFO, PRODUCT_SLUGS } from '../../data/constants';
+import { test, expect } from '../../../fixtures/test.fixture';
+import { toCents } from '../../../utils/common-helpers';
+import { addToCartId, CHECKOUT_INFO, PRODUCT_SLUGS } from '../../../data/constants';
 
 const OVERVIEW_TITLE = 'Checkout: Overview';
 const COMPLETE_TITLE = 'Checkout: Complete!';

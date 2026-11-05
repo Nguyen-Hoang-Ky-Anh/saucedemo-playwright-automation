@@ -1,5 +1,5 @@
-import { test, expect } from '../../fixtures/test.fixture';
-import { TEST_USERS, WRONG_PASSWORD, ERROR_MESSAGES } from '../../data/constants';
+import { test, expect } from '../../../fixtures/test.fixture';
+import { TEST_USERS, WRONG_PASSWORD, ERROR_MESSAGES } from '../../../data/constants';
 
 // URL trang đăng nhập (có hoặc không có dấu "/" ở cuối)
 const LOGIN_URL = /^https:\/\/www\.saucedemo\.com\/?$/;

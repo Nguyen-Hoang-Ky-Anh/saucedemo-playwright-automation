@@ -1,5 +1,5 @@
-import { test, expect } from '../../fixtures/test.fixture';
-import { PRODUCT_SLUGS, addToCartId, removeId, BUTTON_TEXT } from '../../data/constants';
+import { test, expect } from '../../../fixtures/test.fixture';
+import { PRODUCT_SLUGS, addToCartId, removeId, BUTTON_TEXT } from '../../../data/constants';
 
 test.describe('Cart - Flow', () => {
     test('CT-01: should change button to Remove and show cart badge as 1 when adding 1 item', async ({ loggedInPage }) => {

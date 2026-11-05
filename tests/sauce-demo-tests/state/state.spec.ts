@@ -1,5 +1,5 @@
-import { test, expect } from '../../fixtures/test.fixture';
-import { PRODUCT_SLUGS, addToCartId, removeId, BUTTON_TEXT, ERROR_MESSAGES } from '../../data/constants';
+import { test, expect } from '../../../fixtures/test.fixture';
+import { PRODUCT_SLUGS, addToCartId, removeId, BUTTON_TEXT, ERROR_MESSAGES } from '../../../data/constants';
 
 // URL trang đăng nhập (có hoặc không có dấu "/" ở cuối), dùng chung cách kiểm tra với LG-06/LG-07
 const LOGIN_URL = /^https:\/\/www\.saucedemo\.com\/?$/;
@@ -35,6 +35,7 @@ test.describe('State Test Cases', () => {
                                                                                                                             page,
                                                                                                                             checkoutOverviewPage,
                                                                                                                             inventoryPage,
+                                                                                                                            cartPage,
                                                                                                                         }) => {
         // Ghi lại các sản phẩm đang có ở trang tổng kết trước khi Cancel
         const itemNames = page.locator('[data-test="inventory-item-name"]');
@@ -52,7 +53,7 @@ test.describe('State Test Cases', () => {
         await expect(inventoryPage.shoppingCartBadge).toHaveText(String(namesBefore.length));
         await inventoryPage.goToCart();
         await expect(page).toHaveURL(/cart\.html/);
-        expect(await itemNames.allInnerTexts()).toEqual(namesBefore);
+        await expect(cartPage.cartItemNames).toHaveText(namesBefore);
     });
 
     test('ST-03: should redirect to login page with error when opening /cart.html without login', async ({
