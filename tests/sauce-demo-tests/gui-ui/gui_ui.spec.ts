@@ -1,5 +1,5 @@
-import { test, expect } from '../../fixtures/test.fixture';
-// import {PRODUCT_SLUGS} from "../../data/constants";
+import { test, expect } from '../../../fixtures/test.fixture';
+// import {PRODUCT_SLUGS} from "../../../data/constants";
 test.describe('GUI and UI baseline and performance', ()=>{
     test('GUI-01: should render login form elements properly and mask password input', async ({loginPage})=>{
         await loginPage.navigateTo('/');

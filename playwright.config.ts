@@ -7,12 +7,15 @@ dotenv.config();
 const isT20 = process.env.T20 === '1';
 
 const chromium = { ...devices['Desktop Chrome'] };
+const sauceDemoTestDir = './tests/sauce-demo-tests';
+const qaAutomationLabsTestDir = './tests/qa-automation-labs';
+// TODO: Set QA_AUTOMATIONLABS_BASE_URL to the actual site origin before running QA Automation Labs tests.
+const qaAutomationLabsBaseURL = process.env.QA_AUTOMATIONLABS_BASE_URL || 'TODO_SET_QA_AUTOMATIONLABS_BASE_URL';
 
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-  testDir: './tests',
   fullyParallel: !isT20,
   forbidOnly: !!process.env.CI,
   retries: isT20 ? 0 : process.env.CI ? 2 : 0,
@@ -32,16 +35,27 @@ export default defineConfig({
 
   projects: isT20
       ? [
-        { name: '1-login',    testMatch: /login\.spec\.ts/,    use: chromium },
-        { name: '2-products', testMatch: /products\.spec\.ts/, use: chromium },
-        { name: '3-cart',     testMatch: /cart\.spec\.ts/,     use: chromium },
-        { name: '4-checkout', testMatch: /checkout\.spec\.ts/, use: chromium },
-        { name: '5-state',    testMatch: /state\.spec\.ts/,    use: chromium },
+        { name: '1-login',    testDir: sauceDemoTestDir, testMatch: /login\.spec\.ts/,    use: chromium },
+        { name: '2-products', testDir: sauceDemoTestDir, testMatch: /products\.spec\.ts/, use: chromium },
+        { name: '3-cart',     testDir: sauceDemoTestDir, testMatch: /cart\.spec\.ts/,     use: chromium },
+        { name: '4-checkout', testDir: sauceDemoTestDir, testMatch: /checkout\.spec\.ts/, use: chromium },
+        { name: '5-state',    testDir: sauceDemoTestDir, testMatch: /state\.spec\.ts/,    use: chromium },
+        {
+          name: '6-qaautomationlabs',
+          testDir: qaAutomationLabsTestDir,
+          use: { ...chromium, baseURL: qaAutomationLabsBaseURL },
+        },
       ]
       : [
         {
           name: 'chromium',
-          use: { ...devices['Desktop Chrome'] },
+          testDir: sauceDemoTestDir,
+          use: chromium,
+        },
+        {
+          name: 'qaautomationlabs',
+          testDir: qaAutomationLabsTestDir,
+          use: { ...chromium, baseURL: qaAutomationLabsBaseURL },
         },
       ],
 });

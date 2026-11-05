@@ -16,12 +16,21 @@ testing_prj/
 │   ├── inventory.page.ts        # Định nghĩa locator và action của trang Inventory/Products
 │   └── cart.page.ts             # Trang giỏ hàng
 ├── tests/                       # Các kịch bản kiểm thử (Test Specs)
-│   ├── e2e/                     # Các luồng kiểm thử đầu cuối (End-to-End user journeys)
-│   │   └── checkout-flow.spec.ts
-│   ├── auth/                    # Kiểm thử phân hệ xác thực
-│   │   └── login.spec.ts
-│   └── inventory/               # Kiểm thử danh sách sản phẩm & giỏ hàng
-│       └── add-to-cart.spec.ts
+│   ├── sauce-demo-tests/        # Các suite SauceDemo
+│   │   ├── cart/
+│   │   ├── checkout/
+│   │   ├── gui-ui/              # Suite và baseline screenshots
+│   │   ├── login/
+│   │   ├── products/
+│   │   └── state/
+│   └── qa-automation-labs/      # Các suite QA Automation Labs
+│       ├── cart/
+│       ├── checkout/
+│       ├── filter/
+│       ├── gui-ui/
+│       ├── login/
+│       ├── product/
+│       └── register/
 ├── data/                        # Dữ liệu phục vụ kiểm thử (Test Data)
 │   ├── constants.ts             # Các hằng số (Messages, Error texts, Titles)
 │   └── test-users.json          # Dữ liệu các loại account (standard, locked, problem, performance)
@@ -39,7 +48,8 @@ testing_prj/
 
 ### Nguyên tắc phân bổ code:
 - **`pages/`**: CHỈ chứa định vị phần tử (Locators) và các hàm thực thi hành động (Actions, ví dụ: `login()`, `addProductToCart()`). **TUYỆT ĐỐI KHÔNG** đặt assertion `expect(...)` kiểm tra logic test case bên trong `pages/` (trừ kiểm tra trạng thái hiển thị của trang).
-- **`tests/`**: CHỈ chứa kịch bản kiểm thử, gọi các hàm từ `pages/` và thực hiện các bước kiểm tra mong đợi (`expect(...)`).
+- **`tests/sauce-demo-tests/`**: Chứa kịch bản SauceDemo, gọi các hàm từ `pages/` và thực hiện các bước kiểm tra mong đợi (`expect(...)`).
+- **`tests/qa-automation-labs/`**: Chứa các kịch bản riêng cho QA Automation Labs.
 
 ---
 

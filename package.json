@@ -8,6 +8,9 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "playwright test",
+    "test:saucedemo": "playwright test tests/sauce-demo-tests",
+    "test:qalabs": "playwright test tests/qa-automation-labs",
+    "test:all": "playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:report": "playwright show-report"

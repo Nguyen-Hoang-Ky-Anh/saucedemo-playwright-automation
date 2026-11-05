@@ -1,6 +1,6 @@
-# Hướng Dẫn Thiết Lập & Sử Dụng Playwright Automation (SauceDemo)
+# Hướng Dẫn Thiết Lập & Sử Dụng Playwright Automation (SauceDemo & QA Automation Labs)
 
-Tài liệu này hướng dẫn chi tiết từng bước cách thiết lập môi trường, cấu hình và thực thi kiểm thử tự động hóa với **Playwright** và **TypeScript** cho dự án SauceDemo.
+Tài liệu này hướng dẫn chi tiết từng bước cách thiết lập môi trường, cấu hình và thực thi kiểm thử tự động hóa với **Playwright** và **TypeScript** cho SauceDemo và QA Automation Labs.
 
 ---
 
@@ -50,8 +50,22 @@ npx playwright install chromium
 
 ```plaintext
 testing_prj/
-├── tests/                           # Thư mục chứa các file kịch bản kiểm thử (*.spec.ts)
-│   └── example.spec.ts              # Kịch bản kiểm thử mẫu cho SauceDemo
+├── tests/
+│   ├── sauce-demo-tests/            # Các suite SauceDemo hiện có
+│   │   ├── cart/
+│   │   ├── checkout/
+│   │   ├── gui-ui/                  # Bao gồm baseline screenshot của Playwright
+│   │   ├── login/
+│   │   ├── products/
+│   │   └── state/
+│   └── qa-automation-labs/          # Các spec dành cho QA Automation Labs
+│       ├── cart/
+│       ├── checkout/
+│       ├── filter/
+│       ├── gui-ui/
+│       ├── login/
+│       ├── product/
+│       └── register/
 ├── playwright-report/               # Báo cáo kết quả kiểm thử định dạng HTML (sinh ra sau khi test)
 ├── test-results/                    # Chứa screenshots, videos, trace khi test thất bại
 ├── .env                             # Biến môi trường cục bộ (chứa user/pass, không push lên git)
@@ -66,67 +80,22 @@ testing_prj/
 
 ## 4. Chi Tiết File Cấu Hình `playwright.config.ts`
 
-File cấu hình [playwright.config.ts](file:///d:/testing_prj/playwright.config.ts) được thiết lập tối ưu cho ứng dụng SauceDemo:
+File cấu hình [playwright.config.ts](./playwright.config.ts) có project riêng cho mỗi site. Project SauceDemo dùng `tests/sauce-demo-tests/` và URL `https://www.saucedemo.com`; project QA Automation Labs dùng `tests/qa-automation-labs/` và Chromium.
 
-```typescript
-import { defineConfig, devices } from '@playwright/test';
-import dotenv from 'dotenv';
-
-// Đọc cấu hình từ file .env
-dotenv.config();
-
-export default defineConfig({
-  // Thư mục chứa các test suites
-  testDir: './tests',
-
-  // Chạy các test song song để tối ưu tốc độ
-  fullyParallel: true,
-
-  // Chặn vô tình commit `test.only` khi chạy trên CI
-  forbidOnly: !!process.env.CI,
-
-  // Thử lại khi test fail trên CI
-  retries: process.env.CI ? 2 : 0,
-
-  // Số worker chạy song song (1 worker khi chạy trên CI để tránh nghẽn tài nguyên)
-  workers: process.env.CI ? 1 : undefined,
-
-  // Định dạng xuất báo cáo kiểm thử
-  reporter: 'html',
-
-  use: {
-    // URL gốc của ứng dụng (dùng relative path trong test: page.goto('/'))
-    baseURL: 'https://www.saucedemo.com',
-
-    // Ghi lại trace khi test bị retry để điều tra lỗi
-    trace: 'on-first-retry',
-
-    // Tự động chụp ảnh khi test case thất bại
-    screenshot: 'only-on-failure',
-
-    // Giữ lại video quay màn hình khi có test fail
-    video: 'retain-on-failure',
-  },
-
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    // Có thể bổ sung firefox hoặc webkit tại đây nếu cần
-  ],
-});
-```
+Đặt `QA_AUTOMATIONLABS_BASE_URL` thành origin thật của QA Automation Labs trong `.env` hoặc môi trường CI trước khi chạy project này. URL vẫn là placeholder có ghi chú TODO trong cấu hình cho tới khi được cung cấp; không có URL mặc định được suy đoán. Các trang site này có đường dẫn như `/shop.php`, `/cart.php` và `/register.php`. Test so sánh ảnh có thể dùng assertion screenshot tích hợp `toHaveScreenshot` của Playwright trên Chromium; không cần cài thêm thư viện.
 
 ---
 
 ## 5. Các Lệnh Thực Thi Kiểm Thử (NPM Scripts)
 
-Trong file [package.json](file:///d:/testing_prj/package.json), các câu lệnh sau đã được cấu hình sẵn:
+Chọn site cần chạy bằng script tương ứng trong file [package.json](./package.json):
 
 | Câu lệnh | Mô tả | Chi tiết |
 | :--- | :--- | :--- |
-| `npm test` | Chạy toàn bộ test suites | Chạy ở chế độ ngầm (Headless) |
+| `npm run test:saucedemo` | Chạy suite SauceDemo | Chạy test trong `tests/sauce-demo-tests/` |
+| `npm run test:qalabs` | Chạy suite QA Automation Labs | Cần đặt `QA_AUTOMATIONLABS_BASE_URL`; do spec hiện rỗng nên Playwright báo chưa có test để chạy |
+| `npm run test:all` | Chạy test của cả hai site | Chạy tất cả project đã cấu hình |
+| `npm test` | Chạy toàn bộ test suites | Tương đương `npm run test:all` |
 | `npm run test:ui` | Mở giao diện Playwright UI | Cung cấp timeline, live locator, time-travel debugging |
 | `npm run test:headed` | Chạy test có hiển thị trình duyệt | Quan sát trực tiếp các thao tác click, điền form trên màn hình |
 | `npm run test:report` | Xem báo cáo kiểm thử HTML | Mở web server cục bộ xem biểu đồ, kết quả, log, ảnh chụp lỗi |
@@ -135,9 +104,9 @@ Trong file [package.json](file:///d:/testing_prj/package.json), các câu lệnh
 
 ## 6. Hướng Dẫn Viết Kịch Bản Test Mới
 
-Các kịch bản kiểm thử mới phải được đặt trong thư mục `tests/` với đuôi định dạng `.spec.ts`.
+Kịch bản SauceDemo mới phải được đặt trong `tests/sauce-demo-tests/`; kịch bản QA Automation Labs đặt trong thư mục tương ứng dưới `tests/qa-automation-labs/`. Tất cả file test có đuôi `.spec.ts`.
 
-### Ví dụ kịch bản kiểm thử chuẩn (`tests/example.spec.ts`):
+### Ví dụ kịch bản kiểm thử chuẩn (`tests/sauce-demo-tests/login/login.spec.ts`):
 
 ```typescript
 import { test, expect } from '@playwright/test';
