@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures/test.fixture';
+import { test, expect } from '../../fixtures/test.fixture';
 
 test.describe('Products Inventory Feature (PR-01 to PR-07)', () => {
   test('PR-01: Kiểm tra trang sản phẩm hiển thị đủ số lượng sản phẩm', async ({ loggedInPage, page }) => {
