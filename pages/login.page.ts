@@ -1,5 +1,6 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
+import { TEST_USERS } from '../data/constants';
 
 export class LoginPage extends BasePage {
   // Locators tuân thủ quy chuẩn: data-test và camelCase
@@ -24,15 +25,41 @@ export class LoginPage extends BasePage {
   }
 
   /**
+   * Điền tên đăng nhập
+   */
+  async fillUsername(username: string) {
+    await this.usernameInput.fill(username);
+  }
+
+  /**
+   * Điền mật khẩu
+   */
+  async fillPassword(password: string) {
+    await this.passwordInput.fill(password);
+  }
+
+  /**
+   * Nhấp nút Login
+   */
+  async clickLogin() {
+    await this.loginButton.click();
+  }
+
+  /**
    * Điền thông tin tài khoản và đăng nhập
    */
   async login(username?: string, password?: string) {
-    const user = username ?? process.env.SAUCE_USERNAME!;
-    const pass = password ?? process.env.SAUCE_PASSWORD!;
-
-    if (user) await this.usernameInput.fill(user);
-    if (pass) await this.passwordInput.fill(pass);
-    await this.loginButton.click();
+    if (username !== undefined) {
+      await this.fillUsername(username);
+    } else {
+      await this.fillUsername(TEST_USERS.STANDARD.username);
+    }
+    if (password !== undefined) {
+      await this.fillPassword(password);
+    } else {
+      await this.fillPassword(TEST_USERS.STANDARD.password);
+    }
+    await this.clickLogin();
   }
 
   /**
