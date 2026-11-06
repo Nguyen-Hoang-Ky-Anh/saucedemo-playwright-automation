@@ -10,7 +10,7 @@ const chromium = { ...devices['Desktop Chrome'] };
 const sauceDemoTestDir = './tests/sauce-demo-tests';
 const qaAutomationLabsTestDir = './tests/qa-automation-labs';
 // TODO: Set QA_AUTOMATIONLABS_BASE_URL to the actual site origin before running QA Automation Labs tests.
-const qaAutomationLabsBaseURL = process.env.QA_AUTOMATIONLABS_BASE_URL || 'TODO_SET_QA_AUTOMATIONLABS_BASE_URL';
+const qaAutomationLabsBaseURL = process.env.QA_AUTOMATIONLABS_BASE_URL || 'https://shop.qaautomationlabs.com/';
 
 /**
  * See https://playwright.dev/docs/test-configuration.
