@@ -35,18 +35,20 @@ test.describe('GUI and UI baseline and performance', ()=>{
         await expect(page).toHaveScreenshot('inventory-page-baseline.png',{fullPage:true});
     });
 
-    test('UI-03: should load inventory page in less than 15s for performance_glitch_user',async({page, loginPage})=>{
+    test('UI-03: should load inventory page in less than 15s for performance_glitch_user', async ({ page, loginPage }) => {
         // tính time từ khi đăng nhập đến khi load sản phẩm mất bao nhiêu giây
         // dưới 15 giây thì pass
         await loginPage.navigateTo('/');
         await loginPage.usernameInput.fill('performance_glitch_user');
         await loginPage.passwordInput.fill('secret_sauce');
+
         const start = Date.now();
         await loginPage.loginButton.click();
-        await expect(page).toHaveURL(/inventory\.html/);
-        await expect(page.locator('[data-test="inventory-item"]').first()).toBeVisible();
+        await expect(page).toHaveURL(/inventory\.html/, { timeout: 15000 });
+        await expect(page.locator('[data-test="inventory-item"]').first())
+            .toBeVisible({ timeout: 15000 });
         const loadTime = Date.now() - start;
-        expect(loadTime).toBeLessThan(15000);
 
+        expect(loadTime).toBeLessThan(15000);
     });
 })
