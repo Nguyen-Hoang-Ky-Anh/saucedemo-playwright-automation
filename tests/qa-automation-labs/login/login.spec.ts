@@ -1,8 +1,10 @@
 import { expect, test } from '@playwright/test';
 import { QaAutomationLabsLoginPage } from '../../../pages/qa-automation-labs-login.page';
+import { getDemoCredentials } from '../test-data';
 
 test.describe('Login', () => {
   let loginPage: QaAutomationLabsLoginPage;
+  const demoCredentials = getDemoCredentials();
 
   test.beforeEach(async ({ page }) => {
     loginPage = new QaAutomationLabsLoginPage(page);
@@ -20,7 +22,7 @@ test.describe('Login', () => {
     await expect(loginPage.errorMessage.first()).toBeVisible();
     await expect(page).toHaveURL(loginUrl);
 
-    await loginPage.emailInput.fill('demo@demo.com');
+    await loginPage.emailInput.fill(demoCredentials.email);
     await loginPage.loginButton.click();
 
     // Site hiện chỉ hiển thị một lỗi bắt buộc mỗi lần gửi form.
@@ -34,7 +36,7 @@ test.describe('Login', () => {
     for (const email of ['demo', 'demo@']) {
       await test.step(`Từ chối email "${email}"`, async () => {
         await loginPage.emailInput.fill(email);
-        await loginPage.passwordInput.fill('demo');
+        await loginPage.passwordInput.fill(demoCredentials.password);
         await loginPage.loginButton.click();
 
         // Xác minh nội dung cụ thể của cảnh báo email trên site thật.
@@ -60,8 +62,8 @@ test.describe('Login', () => {
 
     await loginPage.autofillDemoCredentialsButton.click();
 
-    await expect(loginPage.emailInput).toHaveValue('demo@demo.com');
-    await expect(loginPage.passwordInput).toHaveValue('demo');
+    await expect(loginPage.emailInput).toHaveValue(demoCredentials.email);
+    await expect(loginPage.passwordInput).toHaveValue(demoCredentials.password);
     await expect(loginPage.passwordInput).toHaveAttribute('type', 'password');
   });
 });

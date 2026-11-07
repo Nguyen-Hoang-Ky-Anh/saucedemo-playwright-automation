@@ -1,23 +1,11 @@
 import { expect, test } from '@playwright/test';
-import {
-  QaAutomationLabsRegisterPage,
-  type RegisterData,
-} from '../../../pages/qa-automation-labs-register.page';
-
-const TD04: RegisterData = {
-  firstName: 'Nguyen Van An',
-  lastName: 'Nguyen',
-  email: 'demo@demo.com',
-  telephone: '9876543210',
-  gender: 'Female',
-  dateOfBirth: '1990-01-15',
-  country: 'India',
-  password: 'Abc@12345!xyz',
-  passwordConfirm: 'Abc@12345!xyz',
-};
+import { QaAutomationLabsRegisterPage } from '../../../pages/qa-automation-labs-register.page';
+import { getDemoCredentials, getRegisterTestData } from '../test-data';
 
 test.describe('Register', () => {
   let registerPage: QaAutomationLabsRegisterPage;
+  const demoCredentials = getDemoCredentials();
+  const registerTestData = getRegisterTestData();
 
   test.beforeEach(async ({ page }) => {
     registerPage = new QaAutomationLabsRegisterPage(page);
@@ -27,10 +15,10 @@ test.describe('Register', () => {
   test('RG-11: Password và Password Confirm không khớp', async ({ page }) => {
     // Dùng email demo đã tồn tại để bảo đảm không thể tạo tài khoản mới nếu validation hỏng.
     await registerPage.fillRequiredFields({
-      ...TD04,
-      email: 'demo@demo.com',
-      password: 'Abc@1234',
-      passwordConfirm: 'Abc@5678',
+      ...registerTestData.td04,
+      email: demoCredentials.email,
+      password: registerTestData.mismatchedPassword,
+      passwordConfirm: registerTestData.mismatchedPasswordConfirm,
     });
     const registerUrl = page.url();
     const usersBefore = await page.evaluate(() => localStorage.getItem('users'));
@@ -47,9 +35,9 @@ test.describe('Register', () => {
 
   test('RG-12: Chỉ báo độ mạnh mật khẩu', async () => {
     const strengthLevels = [
-      { value: 'abc', label: 'Weak' },
-      { value: 'Abcdefgh', label: 'Medium' },
-      { value: 'Abc12345', label: 'Strong' },
+      { value: registerTestData.weakPassword, label: 'Weak' },
+      { value: registerTestData.mediumPassword, label: 'Medium' },
+      { value: registerTestData.strongPassword, label: 'Strong' },
     ];
 
     await registerPage.passwordInput.focus();
@@ -74,10 +62,10 @@ test.describe('Register', () => {
 
 
   test('RG-13: Đăng ký bằng email đã tồn tại', async ({ page }) => {
-    // Test này phụ thuộc vào tài khoản demo@demo.com đã có sẵn trên site.
+    // Test này phụ thuộc vào tài khoản demo đã có sẵn trên site.
     await registerPage.fillRequiredFields({
-      ...TD04,
-      email: 'demo@demo.com',
+      ...registerTestData.td04,
+      email: demoCredentials.email,
     });
     const registerUrl = page.url();
     const usersBefore = await page.evaluate(() => localStorage.getItem('users'));
