@@ -30,11 +30,36 @@ jobs:
       - name: Run Playwright Tests
         run: npx playwright test
         env:
+          # SauceDemo
           SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
           SAUCE_PASSWORD: ${{ secrets.SAUCE_PASSWORD }}
+          SAUCE_LOCKED_USERNAME: ${{ secrets.SAUCE_LOCKED_USERNAME }}
+          SAUCE_GLITCH_USERNAME: ${{ secrets.SAUCE_GLITCH_USERNAME }}
+          SAUCE_INVALID_USERNAME: ${{ secrets.SAUCE_INVALID_USERNAME }}
+          SAUCE_INVALID_PASSWORD: ${{ secrets.SAUCE_INVALID_PASSWORD }}
 
-      - name: Upload Playwright Report (Tùy chọn)
-        # Bước này giúp bạn tải file báo cáo lỗi về xem nếu test bị failed (đỏ)
+          # QA Automation Labs
+          QA_AUTOMATIONLABS_BASE_URL: ${{ vars.QA_AUTOMATIONLABS_BASE_URL }}
+          QA_AUTOMATIONLABS_DEMO_EMAIL: ${{ secrets.QA_AUTOMATIONLABS_DEMO_EMAIL }}
+          QA_AUTOMATIONLABS_DEMO_PASSWORD: ${{ secrets.QA_AUTOMATIONLABS_DEMO_PASSWORD }}
+
+          # Register Test Data
+          QA_REGISTER_TD04_FIRST_NAME: ${{ secrets.QA_REGISTER_TD04_FIRST_NAME }}
+          QA_REGISTER_TD04_LAST_NAME: ${{ secrets.QA_REGISTER_TD04_LAST_NAME }}
+          QA_REGISTER_TD04_TELEPHONE: ${{ secrets.QA_REGISTER_TD04_TELEPHONE }}
+          QA_REGISTER_TD04_GENDER: ${{ secrets.QA_REGISTER_TD04_GENDER }}
+          QA_REGISTER_TD04_DOB: ${{ secrets.QA_REGISTER_TD04_DOB }}
+          QA_REGISTER_TD04_COUNTRY: ${{ secrets.QA_REGISTER_TD04_COUNTRY }}
+          QA_REGISTER_TD04_PASSWORD: ${{ secrets.QA_REGISTER_TD04_PASSWORD }}
+
+          # Password Validation Test Data
+          QA_REGISTER_PASSWORD_MISMATCH: ${{ secrets.QA_REGISTER_PASSWORD_MISMATCH }}
+          QA_REGISTER_PASSWORD_CONFIRM_MISMATCH: ${{ secrets.QA_REGISTER_PASSWORD_CONFIRM_MISMATCH }}
+          QA_REGISTER_PASSWORD_WEAK: ${{ secrets.QA_REGISTER_PASSWORD_WEAK }}
+          QA_REGISTER_PASSWORD_MEDIUM: ${{ secrets.QA_REGISTER_PASSWORD_MEDIUM }}
+          QA_REGISTER_PASSWORD_STRONG: ${{ secrets.QA_REGISTER_PASSWORD_STRONG }}
+
+      - name: Upload Playwright Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
