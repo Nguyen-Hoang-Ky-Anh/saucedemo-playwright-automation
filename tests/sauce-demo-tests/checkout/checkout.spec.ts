@@ -257,10 +257,15 @@ test.describe('Checkout - Multiple products and empty cart', () => {
             await inventoryPage.addItemToCart(addToCartId(slug));
         }
         await inventoryPage.goToCart();
+        await expect(page).toHaveURL(/cart\.html/);
 
         const names = page.locator('[data-test="inventory-item-name"]');
         const prices = page.locator('[data-test="inventory-item-price"]');
         const quantities = page.locator('[data-test="item-quantity"]');
+        await expect(names).toHaveCount(SLUGS.length);
+        await expect(prices).toHaveCount(SLUGS.length);
+        await expect(quantities).toHaveCount(SLUGS.length);
+
         const cartNames = await names.allInnerTexts();
         const cartPrices = await prices.allInnerTexts();
         const cartQuantities = await quantities.allInnerTexts();
@@ -272,9 +277,12 @@ test.describe('Checkout - Multiple products and empty cart', () => {
         await page.locator('[data-test="continue"]').click();
         await expect(page).toHaveURL(/checkout-step-two\.html/);
 
-        expect(await names.allInnerTexts()).toEqual(cartNames);
-        expect(await prices.allInnerTexts()).toEqual(cartPrices);
-        expect(await quantities.allInnerTexts()).toEqual(cartQuantities);
+        await expect(names).toHaveCount(cartNames.length);
+        await expect(names).toHaveText(cartNames);
+        await expect(prices).toHaveCount(cartPrices.length);
+        await expect(prices).toHaveText(cartPrices);
+        await expect(quantities).toHaveCount(cartQuantities.length);
+        await expect(quantities).toHaveText(cartQuantities);
     });
 
     test('CO-15: should record behavior when checking out with an empty cart', async ({ page, loggedInPage }) => {
