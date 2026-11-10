@@ -1,0 +1,129 @@
+import { expect, test } from '@playwright/test';
+import { QaAutomationLabsCartPage } from '../../../pages/qa-automation-labs-cart.page';
+import { addTwoDistinctProducts, clearCart, expectCartProduct } from './cart.helper';
+import type { AddedProduct } from './cart.helper';
+import { loginAsDemo } from '../product/product-auth.helper';
+
+test.describe('Cart', () => {
+  test.describe.configure({ mode: 'serial' });
+  let loggedIn = false;
+
+  test.beforeEach(async ({ page }) => {
+    loggedIn = false;
+    await loginAsDemo(page);
+    loggedIn = true;
+    // TODO: Xác minh giỏ hàng được lưu theo tài khoản hay theo phiên.
+    await clearCart(page);
+  });
+
+  test.afterEach(async ({ page }) => {
+    if (loggedIn) {
+      await clearCart(page);
+    }
+  });
+
+  test.describe('CT-03', () => {
+    let addedProducts: [AddedProduct, AddedProduct];
+
+    test.beforeEach(async ({ page }) => {
+      addedProducts = await addTwoDistinctProducts(page);
+    });
+
+    // Ưu tiên P1, kỹ thuật chuyển đổi trạng thái.
+    test('CT-03: Kiểm tra trang giỏ hàng liệt kê đúng các sản phẩm đã thêm', async ({ page }) => {
+      const cartPage = new QaAutomationLabsCartPage(page);
+      let recordedProducts: [AddedProduct, AddedProduct] = addedProducts;
+      let cartProducts: Awaited<ReturnType<typeof cartPage.readProducts>> = [];
+
+      await test.step('1) Ghi lại tên và giá của hai sản phẩm đã thêm.', async () => {
+        recordedProducts = addedProducts;
+      });
+
+      await test.step('2) Bấm icon giỏ hàng để mở trang giỏ.', async () => {
+        await cartPage.openCartByIcon();
+      });
+
+      await test.step('3) Đối chiếu danh sách trong giỏ với thông tin đã ghi.', async () => {
+        cartProducts = await cartPage.readProducts();
+      });
+
+      expect(cartProducts, 'Trang giỏ hàng phải liệt kê đúng hai sản phẩm.').toHaveLength(2);
+      expect(
+        cartProducts.map(({ name }) => name).sort(),
+        'Tên hai sản phẩm trong giỏ phải đúng với hai sản phẩm đã thêm.',
+      ).toEqual(recordedProducts.map(({ name }) => name).sort());
+
+      for (const expected of recordedProducts) {
+        const actual = cartProducts.find((product) => product.name === expected.name);
+        expect(actual, `Sản phẩm "${expected.name}" phải có trong giỏ.`).toBeDefined();
+        expectCartProduct(actual!, expected);
+      }
+    });
+  });
+
+  test.describe('CT-04', () => {
+    let seededProducts: [AddedProduct, AddedProduct];
+
+    test.beforeEach(async ({ page }) => {
+      seededProducts = await addTwoDistinctProducts(page);
+      const cartPage = new QaAutomationLabsCartPage(page);
+      await cartPage.openCartByIcon();
+      await expect(page).toHaveURL(/\/cart\.php(?:[?#]|$)/);
+      await expect(cartPage.cartProducts, 'Điều kiện trước CT-04 cần đúng hai sản phẩm trong giỏ.').toHaveCount(2);
+    });
+
+    // Ưu tiên P2, kỹ thuật use case.
+    test('CT-04: Kiểm tra xóa một sản phẩm khỏi giỏ hàng', async ({ page }) => {
+      const cartPage = new QaAutomationLabsCartPage(page);
+      let totalBeforeCents = 0;
+      let badgeBefore = 0;
+      let removedProduct: AddedProduct | undefined;
+      let remainingProduct: AddedProduct | undefined;
+      let productsAfterRemoval: Awaited<ReturnType<typeof cartPage.readProducts>> = [];
+      let totalAfterCents = 0;
+      let badgeAfter = 0;
+
+      await test.step('1) Ghi lại tổng tiền và số trên icon giỏ.', async () => {
+        totalBeforeCents = await cartPage.getTotalCents();
+        badgeBefore = await cartPage.getCartBadgeCount();
+      });
+
+      await test.step('2) Ghi thông tin sản phẩm đầu tiên rồi bấm nút xóa.', async () => {
+        const firstProduct = (await cartPage.readProducts())[0];
+        expect(firstProduct, 'Phải có sản phẩm đầu tiên để xóa.').toBeDefined();
+        removedProduct = {
+          name: firstProduct.name,
+          priceCents: firstProduct.priceCents,
+        };
+        remainingProduct = seededProducts.find(({ name }) => name !== removedProduct?.name);
+        expect(remainingProduct, 'Giỏ phải còn một sản phẩm khác sản phẩm được xóa.').toBeDefined();
+        await cartPage.removeFirstProduct();
+      });
+
+      await test.step('3) Quan sát danh sách, tổng tiền và số trên icon giỏ.', async () => {
+        await expect(cartPage.cartProducts, 'Sau khi xóa phải còn đúng một sản phẩm.').toHaveCount(1);
+        productsAfterRemoval = await cartPage.readProducts();
+        totalAfterCents = await cartPage.getTotalCents();
+        badgeAfter = await cartPage.getCartBadgeCount();
+      });
+
+      expect(
+        productsAfterRemoval.some(({ name }) => name === removedProduct?.name),
+        'Sản phẩm đã xóa phải biến mất khỏi giỏ.',
+      ).toBe(false);
+      const remainingInCart = productsAfterRemoval[0];
+      expect(remainingInCart?.name, 'Sản phẩm còn lại phải giữ nguyên tên.').toBe(remainingProduct?.name);
+      expect(remainingInCart?.priceCents, 'Sản phẩm còn lại phải giữ nguyên giá.').toBe(
+        remainingProduct?.priceCents,
+      );
+      expect(remainingInCart?.quantity, 'Số lượng sản phẩm còn lại phải vẫn bằng 1.').toBe(1);
+
+      expect(
+        totalAfterCents,
+        'Tổng tiền mới phải bằng tổng cũ trừ giá của sản phẩm đã xóa.',
+      ).toBe(totalBeforeCents - (removedProduct?.priceCents ?? 0));
+      expect(badgeBefore, 'Số trên icon giỏ trước khi xóa phải là 2.').toBe(2);
+      expect(badgeAfter, 'Số trên icon giỏ sau khi xóa phải giảm từ 2 xuống 1.').toBe(1);
+    });
+  });
+});
