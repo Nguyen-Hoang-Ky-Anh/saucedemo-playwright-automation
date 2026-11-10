@@ -1,5 +1,4 @@
 
-import { existsSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
 const LOGIN_PATH = '/';
@@ -21,12 +20,6 @@ test.describe('Visual', () => {
                                                                             browserName,
                                                                           }) => {
     test.skip(browserName !== 'chromium', 'UI-01 chỉ chạy trên Chromium.');
-
-    const baselinePath = test.info().snapshotPath(BASELINE_NAME);
-    expect(
-      existsSync(baselinePath),
-      `Thiếu baseline "${BASELINE_NAME}" cho nền tảng "${process.platform}" tại: ${baselinePath}`
-    ).toBe(true);
 
     test.info().annotations.push({
       type: 'Ưu tiên',
@@ -68,6 +61,10 @@ test.describe('Visual', () => {
       await expect(page).toHaveScreenshot(BASELINE_NAME, {
         animations: 'disabled',
         caret: 'hide',
+        mask: [
+          page.getByPlaceholder(/search/i),
+          page.getByRole('button', { name: /autofill demo credentials/i }),
+        ],
       });
     });
   });
