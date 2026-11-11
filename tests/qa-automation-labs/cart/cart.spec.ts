@@ -126,4 +126,44 @@ test.describe('Cart', () => {
       expect(badgeAfter, 'Số trên icon giỏ sau khi xóa phải giảm từ 2 xuống 1.').toBe(1);
     });
   });
+
+  test.describe('CT-07', () => {
+    test.beforeEach(async ({ page }) => {
+      await addTwoDistinctProducts(page);
+      const cartPage = new QaAutomationLabsCartPage(page);
+      await cartPage.openCartByIcon();
+      await expect(page).toHaveURL(/\/cart\.php(?:[?#]|$)/);
+      await expect(
+          cartPage.cartProducts,
+          'Điều kiện trước CT-07 cần ít nhất hai sản phẩm trong giỏ',
+      ).toHaveCount(2);
+    });
+
+    test('CT-07: Kiểm tra tính tổng tiền giỏ hàng', async ({ page }) => {
+      const cartPage = new QaAutomationLabsCartPage(page);
+      let cartProducts: Awaited<ReturnType<typeof cartPage.readProducts>> = [];
+      let expectedTotalCents = 0;
+      let displayedTotalCents = 0;
+
+      await test.step('1) Đọc đơn giá và số lượng của từng dòng sản phẩm trong giỏ hàng', async () => {
+        cartProducts = await cartPage.readProducts();
+        expect(cartProducts.length, 'Giỏ hàng phải có sản phẩm để tính tổng tiền').toBeGreaterThanOrEqual(2);
+      });
+
+      await test.step('2) Tính tổng (đơn giá × số lượng) của tất cả các dòng', async () => {
+        expectedTotalCents = cartProducts.reduce(
+            (sum, product) => sum + product.priceCents * product.quantity,
+            0,
+        );
+      });
+
+      await test.step('3) Đọc tổng tiền hiển thị trên trang giỏ hàng và đối chiếu', async () => {
+        displayedTotalCents = await cartPage.getTotalCents();
+        expect(
+            displayedTotalCents,
+            'Tổng tiền hiển thị phải bằng tổng (đơn giá × số lượng) của các dòng cộng lại',
+        ).toBe(expectedTotalCents);
+      });
+    });
+  });
 });
