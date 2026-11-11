@@ -12,6 +12,152 @@ test.describe('Register', () => {
     await registerPage.open();
   });
 
+  test('RG-07: Để trống Date of Birth', async ({ page }) => {
+    await registerPage.fillRequiredFields({
+      ...registerTestData.td04,
+      email: `rg07_${Date.now()}@example.com`,
+      dateOfBirth: '',
+    });
+    const registerUrl = page.url();
+    const usersBefore = await page.evaluate(() => localStorage.getItem('users'));
+
+    await registerPage.registerButton.click();
+
+    const isInvalid = await registerPage.dateOfBirthInput.evaluate(
+        (input: HTMLInputElement) => !input.checkValidity() || input.validationMessage !== '',
+    );
+    const hasAlert = await registerPage.errorMessages.first().isVisible().catch(() => false);
+    const hasErrorText = await page
+        .locator('.invalid-feedback, .text-danger, .error-message')
+        .first()
+        .isVisible()
+        .catch(() => false);
+
+    expect(isInvalid || hasAlert || hasErrorText).toBe(true);
+    await expect(page).toHaveURL(registerUrl);
+    await expect
+        .poll(() => page.evaluate(() => localStorage.getItem('users')))
+        .toBe(usersBefore);
+  });
+
+  test('RG-08: Không chọn Country', async ({ page }) => {
+    await registerPage.fillRequiredFields({
+      ...registerTestData.td04,
+      email: `rg08_${Date.now()}@example.com`,
+    });
+    await registerPage.countrySelect.selectOption({ index: 0 });
+    const registerUrl = page.url();
+    const usersBefore = await page.evaluate(() => localStorage.getItem('users'));
+
+    await registerPage.registerButton.click();
+
+    const isInvalid = await registerPage.countrySelect.evaluate(
+        (select: HTMLSelectElement) => !select.checkValidity() || select.validationMessage !== '',
+    );
+    const hasAlert = await registerPage.errorMessages.first().isVisible().catch(() => false);
+    const hasErrorText = await page
+        .locator('.invalid-feedback, .text-danger, .error-message')
+        .first()
+        .isVisible()
+        .catch(() => false);
+
+    expect(isInvalid || hasAlert || hasErrorText).toBe(true);
+    await expect(page).toHaveURL(registerUrl);
+    await expect
+        .poll(() => page.evaluate(() => localStorage.getItem('users')))
+        .toBe(usersBefore);
+  });
+
+  test('RG-09: Email sai định dạng', async ({ page }) => {
+    const registerUrl = page.url();
+    const usersBefore = await page.evaluate(() => localStorage.getItem('users'));
+
+    for (const invalidEmail of ['abc', 'abc@', '@abc.com']) {
+      await test.step(`Từ chối email "${invalidEmail}"`, async () => {
+        await registerPage.fillRequiredFields({
+          ...registerTestData.td04,
+          email: invalidEmail,
+        });
+
+        await registerPage.registerButton.click();
+
+        const isInvalid = await registerPage.emailInput.evaluate(
+            (input: HTMLInputElement) => !input.checkValidity() || input.validationMessage !== '',
+        );
+        const hasAlert = await registerPage.errorMessages.first().isVisible().catch(() => false);
+        const hasErrorText = await page
+            .locator('.invalid-feedback, .text-danger, .error-message')
+            .first()
+            .isVisible()
+            .catch(() => false);
+
+        expect(isInvalid || hasAlert || hasErrorText).toBe(true);
+        await expect(page).toHaveURL(registerUrl);
+        await expect
+            .poll(() => page.evaluate(() => localStorage.getItem('users')))
+            .toBe(usersBefore);
+      });
+    }
+  });
+
+  test('RG-10: Telephone sai định dạng (chữ, ký tự đặc biệt, quá ngắn)', async ({ page }) => {
+    const registerUrl = page.url();
+    const usersBefore = await page.evaluate(() => localStorage.getItem('users'));
+
+    await test.step('Từ chối chữ/ký tự đặc biệt ("abc")', async () => {
+      await registerPage.fillRequiredFields({
+        ...registerTestData.td04,
+        email: `rg10_alpha_${Date.now()}@example.com`,
+      });
+      await registerPage.telephoneInput.fill('');
+      await registerPage.telephoneInput.pressSequentially('abc');
+
+      await registerPage.registerButton.click();
+
+      const isInvalid = await registerPage.telephoneInput.evaluate(
+          (input: HTMLInputElement) => !input.checkValidity() || input.validationMessage !== '',
+      );
+      const hasAlert = await registerPage.errorMessages.first().isVisible().catch(() => false);
+      const hasErrorText = await page
+          .locator('.invalid-feedback, .text-danger, .error-message')
+          .first()
+          .isVisible()
+          .catch(() => false);
+
+      expect(isInvalid || hasAlert || hasErrorText).toBe(true);
+      await expect(page).toHaveURL(registerUrl);
+      await expect
+          .poll(() => page.evaluate(() => localStorage.getItem('users')))
+          .toBe(usersBefore);
+    });
+
+    await test.step('Từ chối số điện thoại quá ngắn ("123")', async () => {
+      await registerPage.fillRequiredFields({
+        ...registerTestData.td04,
+        email: `rg10_short_${Date.now()}@example.com`,
+        telephone: '123',
+      });
+
+      await registerPage.registerButton.click();
+
+      const isInvalid = await registerPage.telephoneInput.evaluate(
+          (input: HTMLInputElement) => !input.checkValidity() || input.validationMessage !== '',
+      );
+      const hasAlert = await registerPage.errorMessages.first().isVisible().catch(() => false);
+      const hasErrorText = await page
+          .locator('.invalid-feedback, .text-danger, .error-message')
+          .first()
+          .isVisible()
+          .catch(() => false);
+
+      expect(isInvalid || hasAlert || hasErrorText).toBe(true);
+      await expect(page).toHaveURL(registerUrl);
+      await expect
+          .poll(() => page.evaluate(() => localStorage.getItem('users')))
+          .toBe(usersBefore);
+    });
+  });
+
   test('RG-11: Password và Password Confirm không khớp', async ({ page }) => {
     // Dùng email demo đã tồn tại để bảo đảm không thể tạo tài khoản mới nếu validation hỏng.
     await registerPage.fillRequiredFields({
