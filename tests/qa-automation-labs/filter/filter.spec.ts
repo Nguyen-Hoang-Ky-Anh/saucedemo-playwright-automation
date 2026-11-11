@@ -72,6 +72,44 @@ test.describe('Filter', () => {
     initialSnapshot = snapshotProducts(await filterPage.readProducts());
   });
 
+  test('FL-04: Kiểm tra lọc sản phẩm theo Color', async () => {
+    let filteredProducts: DisplayedProduct[] = [];
+
+    await test.step('1) Chọn bộ lọc Color "Black".', async () => {
+      await filterPage.selectFilterOption('Color', FILTERS.color);
+      await filterPage.waitForProductListToSettle();
+      filteredProducts = await filterPage.readProducts();
+    });
+
+    await test.step('2) Đối chiếu các sản phẩm hiển thị với màu đã chọn', async () => {
+      assertSnapshotOnlyNarrows(
+          initialSnapshot,
+          snapshotProducts(filteredProducts),
+          'Lọc theo Color Black',
+      );
+
+      for (const [index, product] of filteredProducts.entries()) {
+        expect(product.name, `Sản phẩm kết quả #${index + 1} phải có tên hiển thị`).not.toBe('');
+        const displayedColor = product.displayedAttributes.Color;
+        if (displayedColor !== undefined) {
+          expect(
+              displayedColor.toLowerCase(),
+              `Color của "${product.name}" phải bằng "${FILTERS.color}".`,
+          ).toBe(FILTERS.color.toLowerCase());
+        } else {
+          test.info().annotations.push({
+            type: 'Không kiểm chứng được trên giao diện',
+            description: 'không kiểm chứng được thuộc tính Color trên giao diện',
+          });
+        }
+      }
+
+      if (filteredProducts.length === 0) {
+        await filterPage.expectEmptyResults();
+      }
+    });
+  });
+
   // Ưu tiên P2, kỹ thuật bảng quyết định.
   test('FL-05: Kiểm tra kết hợp nhiều bộ lọc cùng lúc (Type, giá, size, màu)', async () => {
     const snapshots: ProductSnapshot[] = [initialSnapshot];
@@ -145,5 +183,47 @@ test.describe('Filter', () => {
     if (finalProducts.length === 0) {
       await filterPage.expectEmptyResults();
     }
+  });
+
+  test('FL-06: Kiểm tra kết hợp lọc và sắp xếp', async ({ page }) => {
+    const productPage = new QaAutomationLabsProductPage(page);
+    let filteredSnapshot: ProductSnapshot;
+    let finalProducts: DisplayedProduct[] = [];
+
+    await test.step('1) Chọn bộ lọc Color "Black".', async () => {
+      await filterPage.selectFilterOption('Color', FILTERS.color);
+      await filterPage.waitForProductListToSettle();
+      const productsAfterFilter = await filterPage.readProducts();
+      filteredSnapshot = snapshotProducts(productsAfterFilter);
+      assertSnapshotOnlyNarrows(initialSnapshot, filteredSnapshot, 'Lọc theo Color Black');
+    });
+
+    await test.step('2) Chọn sắp xếp sản phẩm theo tên từ A đến Z', async () => {
+      await productPage.selectSortByName(true);
+      await filterPage.waitForProductListToSettle();
+      finalProducts = await filterPage.readProducts();
+    });
+
+    await test.step('3) Kiểm tra kết quả vừa thỏa bộ lọc vừa đúng thứ tự sắp xếp', async () => {
+      expect(
+          finalProducts.length,
+          'Số lượng sản phẩm sau khi sắp xếp phải giữ nguyên so với sau khi lọc',
+      ).toBe(filteredSnapshot.count);
+
+      for (const product of finalProducts) {
+        const displayedColor = product.displayedAttributes.Color;
+        if (displayedColor !== undefined) {
+          expect(displayedColor.toLowerCase()).toBe(FILTERS.color.toLowerCase());
+        }
+      }
+
+      const names = finalProducts.map(({ name }) => name);
+      const expectedNames = [...names].sort((left, right) =>
+          left.localeCompare(right, undefined, { sensitivity: 'base' }),
+      );
+      expect(names, 'Kết quả đã lọc phải được sắp xếp theo tên tăng dần từ A đến Z').toEqual(
+          expectedNames,
+      );
+    });
   });
 });
