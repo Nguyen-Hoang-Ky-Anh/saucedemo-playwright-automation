@@ -106,4 +106,62 @@ test.describe('Product', () => {
       'Số lượng sản phẩm sau khi sắp xếp Z–A phải bằng số lượng đã ghi ở bước 1.',
     ).toBe(initialCount);
   });
+
+  test('PR-05: Kiểm tra sắp xếp sản phẩm theo giá từ cao đến thấp', async () => {
+    let initialCount = 0;
+    let sortedPrices: number[] = [];
+
+    await test.step('1) Ghi lại số lượng sản phẩm đang hiển thị', async () => {
+      initialCount = await productPage.productList.count();
+    });
+
+    await test.step('2) Mở danh sách sắp xếp, chọn sắp xếp theo giá từ cao đến thấp', async () => {
+      const option = productPage.sortDropdown.getByRole('option', {
+        name: /price\W*high\W+to\W+low/i,
+      });
+      await expect(option, 'Phải tìm thấy tùy chọn sắp xếp giá cao đến thấp').toHaveCount(1);
+      const value = await option.getAttribute('value');
+      expect(value).not.toBeNull();
+      await productPage.sortDropdown.selectOption(value!);
+    });
+
+    await test.step('3) Đọc giá các sản phẩm từ trên xuống dưới', async () => {
+      const count = await productPage.productList.count();
+      sortedPrices = [];
+      for (let index = 0; index < count; index += 1) {
+        const cardText = await productPage.productList.nth(index).locator('..').innerText();
+        const match = cardText.match(/\$\s*([\d,]+(?:\.\d{1,2})?)/);
+        expect(match, `Sản phẩm thứ ${index + 1} phải hiển thị giá`).not.toBeNull();
+        sortedPrices.push(Number(match![1].replaceAll(',', '')));
+      }
+    });
+
+    const expectedPrices = [...sortedPrices].sort((left, right) => right - left);
+    expect(sortedPrices, 'Giá sản phẩm phải được sắp xếp giảm dần từ cao đến thấp').toEqual(
+        expectedPrices,
+    );
+    expect(
+        sortedPrices.length,
+        'Số lượng sản phẩm sau khi sắp xếp giá cao đến thấp phải giữ nguyên',
+    ).toBe(initialCount);
+  });
+
+  test('PR-08: Kiểm tra danh sách sắp xếp có 4 lựa chọn và ghi nhận giá trị mặc định', async () => {
+    await test.step('1) Quan sát và ghi nhận giá trị mặc định của danh sách sắp xếp', async () => {
+      const defaultSort = await productPage.getSelectedSortOption();
+      expect(defaultSort.label, 'Danh sách sắp xếp phải có giá trị mặc định').not.toBe('');
+    });
+
+    await test.step('2) Mở danh sách sắp xếp và kiểm tra đủ 4 lựa chọn.', async () => {
+      const options = productPage.sortDropdown.getByRole('option');
+      const optionLabels = (await options.allTextContents()).map((text) => text.trim());
+      const sortChoiceLabels = optionLabels.filter((text) => !/^sort\s+by$/i.test(text));
+
+      expect(sortChoiceLabels, 'Danh sách sắp xếp phải có đúng 4 lựa chọn sắp xếp.').toHaveLength(4);
+      expect(optionLabels.some((text) => /name\W*a\W+to\W+z/i.test(text))).toBe(true);
+      expect(optionLabels.some((text) => /name\W*z\W+to\W+a/i.test(text))).toBe(true);
+      expect(optionLabels.some((text) => /price\W*low\W+to\W+high/i.test(text))).toBe(true);
+      expect(optionLabels.some((text) => /price\W*high\W+to\W+low/i.test(text))).toBe(true);
+    });
+  });
 });

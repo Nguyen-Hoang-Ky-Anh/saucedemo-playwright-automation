@@ -11,6 +11,50 @@ test.describe('Login', () => {
     await loginPage.open();
   });
 
+  test('LG-03: Đăng nhập với email chưa đăng ký', async ({ page }) => {
+    await loginPage.emailInput.fill('unregistered_user_9999@example.com');
+    await loginPage.passwordInput.fill(demoCredentials.password);
+    const loginUrl = page.url();
+
+    await loginPage.loginButton.click();
+
+    await expect(loginPage.errorMessage.first()).toBeVisible();
+    await expect(loginPage.loginButton).toBeVisible();
+    await expect(page).toHaveURL(loginUrl);
+  });
+
+  test('LG-04: Để trống Email', async ({ page }) => {
+    await loginPage.emailInput.fill('');
+    await loginPage.passwordInput.fill(demoCredentials.password);
+    const loginUrl = page.url();
+
+    await loginPage.loginButton.click();
+
+    const hasAlert = await loginPage.errorMessage.first().isVisible();
+    const validationMessage = await loginPage.emailInput.evaluate(
+        (input: HTMLInputElement) => input.validationMessage,
+    );
+    expect(hasAlert || validationMessage !== '').toBe(true);
+    await expect(loginPage.loginButton).toBeVisible();
+    await expect(page).toHaveURL(loginUrl);
+  });
+
+  test('LG-05: Để trống Password', async ({ page }) => {
+    await loginPage.emailInput.fill(demoCredentials.email);
+    await loginPage.passwordInput.fill('');
+    const loginUrl = page.url();
+
+    await loginPage.loginButton.click();
+
+    const hasAlert = await loginPage.errorMessage.first().isVisible();
+    const validationMessage = await loginPage.passwordInput.evaluate(
+        (input: HTMLInputElement) => input.validationMessage,
+    );
+    expect(hasAlert || validationMessage !== '').toBe(true);
+    await expect(loginPage.loginButton).toBeVisible();
+    await expect(page).toHaveURL(loginUrl);
+  });
+
   test('LG-06: Để trống cả Email và Password', async ({ page }) => {
     await loginPage.emailInput.fill('');
     await loginPage.passwordInput.fill('');
