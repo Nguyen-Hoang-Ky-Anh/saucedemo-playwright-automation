@@ -117,6 +117,23 @@ export class QaAutomationLabsFilterPage {
       .toBe(true);
   }
 
+  async deselectFilterOption(groupName: FilterGroup, optionName: string): Promise<void> {
+    await expect(this.filterGroup(groupName), `Tiêu đề nhóm ${groupName} phải hiển thị.`).toHaveCount(1);
+    const checkbox = this.page.getByRole('checkbox', { name: optionName, exact: true });
+    const optionLabel = this.page.getByText(optionName, { exact: true });
+
+    if (await checkbox.count()) {
+      if (await checkbox.isChecked()) {
+        await optionLabel.click();
+      }
+      await expect
+        .poll(() => checkbox.isChecked(), {
+          message: `Tùy chọn "${optionName}" của nhóm ${groupName} phải được bỏ chọn.`,
+        })
+        .toBe(false);
+    }
+  }
+
   async readProducts(): Promise<DisplayedProduct[]> {
     const productCount = await this.productCards.count();
     const products: DisplayedProduct[] = [];

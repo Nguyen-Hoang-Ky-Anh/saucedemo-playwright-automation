@@ -29,6 +29,22 @@ function parsePriceRange(value: string): { minimum: number; maximum: number } {
   };
 }
 
+const PRICE_RANGES = [
+  '$0 - $100',
+  '$101 - $200',
+  '$201 - $300',
+  '$301 - $400',
+  '$401 - $500',
+] as const;
+
+const SIZES = [
+  'Small',
+  'Medium',
+  'Large',
+  'Extra Large',
+  'Double Extra Large',
+] as const;
+
 const PRICE_RANGE = parsePriceRange(FILTERS.price);
 
 type ProductSnapshot = { names: string[]; count: number };
@@ -70,6 +86,92 @@ test.describe('Filter', () => {
     await expect(filterPage.productList.first()).toBeVisible();
     await filterPage.expectDefaultFilters();
     initialSnapshot = snapshotProducts(await filterPage.readProducts());
+  });
+
+  // Ưu tiên P2, BVA.
+  test('FL-02: Kiểm tra lọc theo từng khoảng giá ($0-100 ... $401-500)', async () => {
+    for (const priceLabel of PRICE_RANGES) {
+      const range = parsePriceRange(priceLabel);
+      let filteredProducts: DisplayedProduct[] = [];
+
+      await test.step(`1) Chọn khoảng giá "${priceLabel}".`, async () => {
+        await filterPage.selectFilterOption('Price', priceLabel);
+        await filterPage.waitForProductListToSettle();
+        filteredProducts = await filterPage.readProducts();
+      });
+
+      await test.step(`2) Đối chiếu giá bán của các sản phẩm hiển thị với khoảng "${priceLabel}".`, async () => {
+        assertSnapshotOnlyNarrows(
+          initialSnapshot,
+          snapshotProducts(filteredProducts),
+          `Lọc theo Price ${priceLabel}`,
+        );
+
+        if (filteredProducts.length === 0) {
+          await filterPage.expectEmptyResults();
+        } else {
+          for (const [index, product] of filteredProducts.entries()) {
+            expect(product.name, `Sản phẩm kết quả #${index + 1} phải có tên hiển thị`).not.toBe('');
+            expect(product.price, `Giá của "${product.name}" phải đọc được`).not.toBeNull();
+            expect(
+              product.price!,
+              `Giá của "${product.name}" phải >= ${range.minimum}.`,
+            ).toBeGreaterThanOrEqual(range.minimum);
+            expect(
+              product.price!,
+              `Giá của "${product.name}" phải <= ${range.maximum}.`,
+            ).toBeLessThanOrEqual(range.maximum);
+          }
+        }
+      });
+
+      await filterPage.deselectFilterOption('Price', priceLabel);
+      await filterPage.waitForProductListToSettle();
+    }
+  });
+
+  // Ưu tiên P2, EP.
+  test('FL-03: Kiểm tra lọc theo Size (Small ... Double Extra Large)', async () => {
+    for (const sizeLabel of SIZES) {
+      let filteredProducts: DisplayedProduct[] = [];
+
+      await test.step(`1) Chọn kích thước "${sizeLabel}".`, async () => {
+        await filterPage.selectFilterOption('Size', sizeLabel);
+        await filterPage.waitForProductListToSettle();
+        filteredProducts = await filterPage.readProducts();
+      });
+
+      await test.step(`2) Đối chiếu thuộc tính Size của các sản phẩm hiển thị với "${sizeLabel}".`, async () => {
+        assertSnapshotOnlyNarrows(
+          initialSnapshot,
+          snapshotProducts(filteredProducts),
+          `Lọc theo Size ${sizeLabel}`,
+        );
+
+        if (filteredProducts.length === 0) {
+          await filterPage.expectEmptyResults();
+        } else {
+          for (const [index, product] of filteredProducts.entries()) {
+            expect(product.name, `Sản phẩm kết quả #${index + 1} phải có tên hiển thị`).not.toBe('');
+            const displayedSize = product.displayedAttributes.Size;
+            if (displayedSize !== undefined) {
+              expect(
+                displayedSize.toLowerCase(),
+                `Size của "${product.name}" phải bằng "${sizeLabel}".`,
+              ).toBe(sizeLabel.toLowerCase());
+            } else {
+              test.info().annotations.push({
+                type: 'Không kiểm chứng được trên giao diện',
+                description: `không kiểm chứng được thuộc tính Size "${sizeLabel}" trên giao diện`,
+              });
+            }
+          }
+        }
+      });
+
+      await filterPage.deselectFilterOption('Size', sizeLabel);
+      await filterPage.waitForProductListToSettle();
+    }
   });
 
   test('FL-04: Kiểm tra lọc sản phẩm theo Color', async () => {
