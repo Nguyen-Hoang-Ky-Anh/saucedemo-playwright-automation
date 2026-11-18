@@ -21,7 +21,7 @@ export async function clearCart(page: Page): Promise<void> {
   await cartPage.clearProducts();
 }
 
-export async function addTwoDistinctProducts(page: Page): Promise<[AddedProduct, AddedProduct]> {
+export async function addDistinctProducts(page: Page, count: number): Promise<AddedProduct[]> {
   const productPage = new QaAutomationLabsProductPage(page);
   const cartPage = new QaAutomationLabsCartPage(page);
 
@@ -31,17 +31,23 @@ export async function addTwoDistinctProducts(page: Page): Promise<[AddedProduct,
   await expect(productPage.productList.first()).toBeVisible();
 
   const productLinks = productPage.productList;
-  expect(await productLinks.count(), 'Danh mục phải có ít nhất hai sản phẩm khác nhau.').toBeGreaterThanOrEqual(2);
+  expect(
+    await productLinks.count(),
+    `Danh mục phải có ít nhất ${count} sản phẩm khác nhau.`,
+  ).toBeGreaterThanOrEqual(count);
 
   const products: AddedProduct[] = [];
-  for (let index = 0; index < 2; index += 1) {
+  for (let index = 0; index < count; index += 1) {
     const productLink = productLinks.nth(index);
     const name = (await productLink.innerText()).trim();
     const card = productLink.locator('..');
     const priceCents = parsePriceCents(await card.innerText());
     const addButton = card.getByRole('button', { name: /add .*to cart/i });
 
-    expect(name, 'Hai sản phẩm được chọn phải khác nhau.').not.toBe(products[0]?.name);
+    expect(
+      products.some((item) => item.name === name),
+      'Các sản phẩm được chọn phải khác nhau.',
+    ).toBe(false);
     await expect(addButton, `Sản phẩm "${name}" phải có nút thêm vào giỏ.`).toBeVisible();
     await addButton.click();
     products.push({ name, priceCents });
@@ -53,6 +59,11 @@ export async function addTwoDistinctProducts(page: Page): Promise<[AddedProduct,
       .toBe(index + 1);
   }
 
+  return products;
+}
+
+export async function addTwoDistinctProducts(page: Page): Promise<[AddedProduct, AddedProduct]> {
+  const products = await addDistinctProducts(page, 2);
   return [products[0], products[1]];
 }
 

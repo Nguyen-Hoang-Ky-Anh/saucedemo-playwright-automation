@@ -53,18 +53,20 @@ export class QaAutomationLabsRegisterPage {
     await this.page.goto('/register.php');
   }
 
-  async fillRequiredFields(data: RegisterData) {
+  async fillRequiredFields(data: Omit<RegisterData, 'gender'> & { gender?: RegisterData['gender'] }) {
     await this.firstNameInput.fill(data.firstName);
     await this.lastNameInput.fill(data.lastName);
     await this.emailInput.fill(data.email);
     await this.telephoneInput.fill(data.telephone);
 
-    const genderRadio = {
-      Male: this.maleRadio,
-      Female: this.femaleRadio,
-      Other: this.otherRadio,
-    }[data.gender];
-    await genderRadio.check();
+    if (data.gender) {
+      const genderRadio = {
+        Male: this.maleRadio,
+        Female: this.femaleRadio,
+        Other: this.otherRadio,
+      }[data.gender];
+      await genderRadio.check();
+    }
 
     await this.dateOfBirthInput.fill(data.dateOfBirth);
     await this.countrySelect.selectOption({ label: data.country });

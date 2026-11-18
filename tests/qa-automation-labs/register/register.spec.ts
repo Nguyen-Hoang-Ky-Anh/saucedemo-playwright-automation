@@ -12,6 +12,110 @@ test.describe('Register', () => {
     await registerPage.open();
   });
 
+  // Ưu tiên P2, EP, bảng quyết định.
+  test('RG-04: Kiểm tra đăng ký khi để trống trường E-Mail', async ({ page }) => {
+    const registerUrl = page.url();
+    const usersBefore = await page.evaluate(() => localStorage.getItem('users'));
+
+    await test.step('1-2) Nhập đầy đủ các trường bắt buộc hợp lệ theo TD-04 và để trống trường E-Mail.', async () => {
+      await registerPage.fillRequiredFields({
+        ...registerTestData.td04,
+        email: '',
+      });
+    });
+
+    await test.step('3) Bấm nút Register.', async () => {
+      await registerPage.registerButton.click();
+    });
+
+    const isInvalid = await registerPage.emailInput.evaluate(
+      (input: HTMLInputElement) => !input.checkValidity() || input.validationMessage !== '',
+    );
+    const hasAlert = await registerPage.errorMessages.first().isVisible().catch(() => false);
+    const hasErrorText = await page
+      .locator('.invalid-feedback, .text-danger, .error-message')
+      .first()
+      .isVisible()
+      .catch(() => false);
+
+    expect(isInvalid || hasAlert || hasErrorText).toBe(true);
+    await expect(page).toHaveURL(registerUrl);
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem('users')))
+      .toBe(usersBefore);
+  });
+
+  // Ưu tiên P2, EP, bảng quyết định.
+  test('RG-05: Kiểm tra đăng ký khi để trống trường Telephone', async ({ page }) => {
+    const registerUrl = page.url();
+    const usersBefore = await page.evaluate(() => localStorage.getItem('users'));
+
+    await test.step('1-2) Nhập đầy đủ các trường bắt buộc hợp lệ theo TD-04 và để trống trường Telephone.', async () => {
+      await registerPage.fillRequiredFields({
+        ...registerTestData.td04,
+        email: `rg05_${Date.now()}@example.com`,
+        telephone: '',
+      });
+    });
+
+    await test.step('3) Bấm nút Register.', async () => {
+      await registerPage.registerButton.click();
+    });
+
+    const isInvalid = await registerPage.telephoneInput.evaluate(
+      (input: HTMLInputElement) => !input.checkValidity() || input.validationMessage !== '',
+    );
+    const hasAlert = await registerPage.errorMessages.first().isVisible().catch(() => false);
+    const hasErrorText = await page
+      .locator('.invalid-feedback, .text-danger, .error-message')
+      .first()
+      .isVisible()
+      .catch(() => false);
+
+    expect(isInvalid || hasAlert || hasErrorText).toBe(true);
+    await expect(page).toHaveURL(registerUrl);
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem('users')))
+      .toBe(usersBefore);
+  });
+
+  // Ưu tiên P2, EP, bảng quyết định.
+  test('RG-06: Kiểm tra đăng ký khi không chọn trường Gender', async ({ page }) => {
+    const registerUrl = page.url();
+    const usersBefore = await page.evaluate(() => localStorage.getItem('users'));
+    const { gender: _ignoredGender, ...td04WithoutGender } = registerTestData.td04;
+
+    await test.step('1-2) Nhập đầy đủ các trường bắt buộc hợp lệ theo TD-04 và giữ nguyên trạng thái chưa chọn Gender.', async () => {
+      await registerPage.fillRequiredFields({
+        ...td04WithoutGender,
+        email: `rg06_${Date.now()}@example.com`,
+      });
+      await expect(registerPage.maleRadio).not.toBeChecked();
+      await expect(registerPage.femaleRadio).not.toBeChecked();
+      await expect(registerPage.otherRadio).not.toBeChecked();
+    });
+
+    await test.step('3) Bấm nút Register.', async () => {
+      await registerPage.registerButton.click();
+    });
+
+    const isInvalid = await registerPage.maleRadio.evaluate(
+      (input: HTMLInputElement) => !input.checkValidity() || input.validationMessage !== '',
+    );
+    const hasAlert = await registerPage.errorMessages.first().isVisible().catch(() => false);
+    const hasErrorText = await page
+      .locator('.invalid-feedback, .text-danger, .error-message')
+      .first()
+      .isVisible()
+      .catch(() => false);
+
+    expect(isInvalid || hasAlert || hasErrorText).toBe(true);
+    await expect(page).toHaveURL(registerUrl);
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem('users')))
+      .toBe(usersBefore);
+  });
+
   test('RG-07: Để trống Date of Birth', async ({ page }) => {
     await registerPage.fillRequiredFields({
       ...registerTestData.td04,

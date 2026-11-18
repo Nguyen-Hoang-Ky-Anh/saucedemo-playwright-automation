@@ -2,6 +2,13 @@ import { expect, test } from '@playwright/test';
 import { QaAutomationLabsProductPage } from '../../../pages/qa-automation-labs-product.page';
 import { loginAsDemo } from './product-auth.helper';
 
+const SHOP_CATEGORIES = [
+  { label: 'Men', name: /men\s+fashion/i, href: 'mens-wear.php' },
+  { label: 'Women', name: /women\s+fashion/i, href: 'womens-wear.php' },
+  { label: 'Kids', name: /kids\s+fashion/i, href: 'kids-wear.php' },
+  { label: 'Electronics', name: /electronics/i, href: 'electronics.php' },
+];
+
 const PRODUCT_CATEGORY = {
   slug: 'mens-wear',
   // TODO: Xác minh lại nhãn này trên site thật.
@@ -29,6 +36,42 @@ function assertProductOrder(names: string[], direction: SortDirection): void {
       : 'Tên sản phẩm phải được sắp xếp giảm dần từ Z đến A.';
   expect(names, message).toEqual(expectedNames);
 }
+
+test.describe('Shop Categories', () => {
+  // Ưu tiên P1, Theo yêu cầu.
+  test('PR-01: Kiểm tra trang Shop hiển thị đủ 4 danh mục', async ({ page }) => {
+    await test.step('1) Truy cập vào trang Shop của hệ thống.', async () => {
+      await loginAsDemo(page);
+      await expect(page, 'Phải đang ở trang Shop (/shop.php).').toHaveURL(/\/shop\.php(?:[?#]|$)/);
+    });
+
+    await test.step('2) Quan sát danh sách các danh mục sản phẩm hiển thị trên trang.', async () => {
+      await expect(page.locator('.product-offer'), 'Trang Shop phải hiển thị đủ 4 danh mục.').toHaveCount(4);
+    });
+
+    await test.step('3) Kiểm tra tên, hình ảnh và liên kết của từng danh mục.', async () => {
+      for (const category of SHOP_CATEGORIES) {
+        const card = page.locator('.product-offer', {
+          has: page.locator(`a[href="${category.href}"]`),
+        });
+        const link = card.locator(`a[href="${category.href}"]`);
+        const image = card.locator('img');
+
+        await expect(card, `Danh mục ${category.label} phải hiển thị.`).toBeVisible();
+        await expect(card, `Danh mục ${category.label} phải hiển thị tên rõ ràng.`).toContainText(category.name);
+        await expect(image, `Danh mục ${category.label} phải có hình ảnh hiển thị.`).toBeVisible();
+        await expect
+          .poll(
+            () => image.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0),
+            { message: `Hình ảnh của danh mục ${category.label} phải tải thành công.` },
+          )
+          .toBe(true);
+        await expect(link, `Danh mục ${category.label} phải có liên kết điều hướng hợp lệ.`).toBeVisible();
+        await expect(link).toHaveAttribute('href', category.href);
+      }
+    });
+  });
+});
 
 test.describe('Product', () => {
   let productPage: QaAutomationLabsProductPage;

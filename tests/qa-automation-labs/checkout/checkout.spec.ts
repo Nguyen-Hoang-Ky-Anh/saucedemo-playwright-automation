@@ -1,4 +1,5 @@
 import { test, type Page } from '@playwright/test';
+import { parsePriceCents, QaAutomationLabsCartPage } from '../../../pages/qa-automation-labs-cart.page';
 import {
   CheckoutObservation,
   QaAutomationLabsCheckoutPage,
@@ -7,6 +8,7 @@ import { loginAsDemo } from '../product/product-auth.helper';
 import {
   addOneProductToCart,
   clearCheckoutCart,
+  fillValidCheckoutInformation,
   openCheckoutFromCart,
 } from './checkout.helper';
 
@@ -31,6 +33,95 @@ async function attachObservation(
 }
 
 test.describe('Checkout', () => {
+  // Ưu tiên P2, Theo yêu cầu.
+  test('CO-04: Kiểm tra tổng tiền, thuế, phí ở trang tổng kết', async ({ page }) => {
+    const { expect } = test;
+    const checkoutPage = new QaAutomationLabsCheckoutPage(page);
+
+    await test.step('0) Điền thông tin giao hàng hợp lệ theo TD-05 và chuyển sang trang tổng kết (Confirm Details)', async () => {
+      await fillValidCheckoutInformation(checkoutPage);
+      await checkoutPage.continueButton.click();
+      await expect(page, 'Phải chuyển sang trang tổng kết đơn hàng (/confirm.php).').toHaveURL(
+        /\/confirm\.php(?:[?#]|$)/,
+      );
+    });
+
+    let itemTotalCents = 0;
+    let taxCents = 0;
+    let shippingCents = 0;
+    let displayedTotalCents = 0;
+
+    await test.step('1-2) Ghi nhận số tiền hàng, thuế, phí vận chuyển và tổng cuối (Total) hiển thị', async () => {
+      const bodyText = await page.locator('body').innerText();
+
+      const itemRows = page.locator('table tr').filter({ hasText: /\$\s*[\d,]+/ });
+      const rowCount = await itemRows.count();
+      expect(rowCount, 'Trang tổng kết phải hiển thị danh sách sản phẩm trong đơn hàng.').toBeGreaterThan(0);
+
+      for (let index = 0; index < rowCount; index += 1) {
+        const cells = itemRows.nth(index).locator('td');
+        if ((await cells.count()) >= 4) {
+          itemTotalCents += parsePriceCents(await cells.nth(3).innerText());
+        }
+      }
+
+      const taxMatch = bodyText.match(/\btax\b[^\d$]*\$\s*([\d,]+(?:\.\d{1,2})?)/i);
+      if (taxMatch) {
+        taxCents = parsePriceCents(`$${taxMatch[1]}`);
+      }
+
+      const shippingMatch = bodyText.match(/\bshipping\b[^\d$]*\$\s*([\d,]+(?:\.\d{1,2})?)/i);
+      if (shippingMatch) {
+        shippingCents = parsePriceCents(`$${shippingMatch[1]}`);
+      }
+
+      const totalMatch = bodyText.match(/\btotal\b[^\d$]*\$\s*([\d,]+(?:\.\d{1,2})?)/i);
+      expect(totalMatch, 'Trang tổng kết phải hiển thị giá trị Total.').not.toBeNull();
+      displayedTotalCents = parsePriceCents(`$${totalMatch![1]}`);
+    });
+
+    await test.step('3) Tính tổng tiền hàng + thuế + phí và so sánh với giá trị Total', async () => {
+      expect(itemTotalCents, 'Tổng tiền hàng phải lớn hơn 0.').toBeGreaterThan(0);
+      expect(
+        itemTotalCents + taxCents + shippingCents,
+        'Tổng cuối cùng (Total) phải bằng tổng tiền hàng cộng thuế và phí.',
+      ).toBe(displayedTotalCents);
+    });
+  });
+
+  // Ưu tiên P3, Chuyển đổi trạng thái.
+  test('CO-05: Kiểm tra chức năng bấm nút Cancel ở bước nhập thông tin checkout', async ({
+    page,
+  }) => {
+    const { expect } = test;
+    const checkoutPage = new QaAutomationLabsCheckoutPage(page);
+    const cartPage = new QaAutomationLabsCartPage(page);
+
+    await checkoutPage.expectInformationStep();
+
+    const summaryRow = page.locator('table tr').filter({ hasText: /\$\s*[\d,]+/ }).first();
+    const summaryCells = summaryRow.locator('td');
+    const expectedProductName = (await summaryCells.nth(0).innerText()).trim();
+    const expectedPriceCents = parsePriceCents(await summaryCells.nth(1).innerText());
+    const expectedQuantity = Number((await summaryCells.nth(2).innerText()).trim());
+
+    await test.step('1) Tại trang nhập thông tin checkout, bấm nút Cancel / Go To Back.', async () => {
+      await expect(checkoutPage.cancelBackButton, 'Nút Cancel / Go To Back phải hiển thị.').toBeVisible();
+      await checkoutPage.cancelBackButton.click();
+    });
+
+    await test.step('2) Quan sát chuyển hướng về /cart.php và kiểm tra giỏ hàng giữ nguyên vẹn.', async () => {
+      await expect(page, 'Hệ thống phải chuyển hướng quay trở về trang giỏ hàng (/cart.php).').toHaveURL(
+        /\/cart\.php(?:[?#]|$)/,
+      );
+
+      const cartProducts = await cartPage.readProducts();
+      expect(cartProducts, 'Giỏ hàng phải giữ nguyên đúng 1 sản phẩm.').toHaveLength(1);
+      expect(cartProducts[0].name).toBe(expectedProductName);
+      expect(cartProducts[0].priceCents).toBe(expectedPriceCents);
+      expect(cartProducts[0].quantity).toBe(expectedQuantity);
+    });
+  });
 
   test('CO-07: Kiểm tra xem lịch sử đơn hàng sau khi đặt hàng thành công (nếu có trang Orders)', async ({
                                                                                                           page,

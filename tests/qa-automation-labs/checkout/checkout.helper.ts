@@ -43,3 +43,44 @@ export async function openCheckoutFromCart(page: Page): Promise<void> {
   await checkoutPage.checkoutButton.click();
   await checkoutPage.expectInformationStep();
 }
+
+export async function fillValidCheckoutInformation(
+  checkoutPage: QaAutomationLabsCheckoutPage,
+): Promise<void> {
+  await checkoutPage.expectInformationStep();
+  const count = await checkoutPage.inputFields.count();
+
+  for (let index = 0; index < count; index += 1) {
+    const field = checkoutPage.inputFields.nth(index);
+    const meta = await field.evaluate((el) => {
+      const input = el as HTMLInputElement | HTMLTextAreaElement;
+      const labels = Array.from(input.labels ?? [])
+        .map((label) => label.innerText.trim())
+        .join(' ');
+      return {
+        text: `${labels} ${input.placeholder} ${input.name} ${input.id}`.toLowerCase(),
+        type: input.getAttribute('type') ?? 'text',
+      };
+    });
+
+    if (meta.type === 'email' || meta.text.includes('email') || meta.text.includes('mail')) {
+      await field.fill(process.env.QA_AUTOMATIONLABS_DEMO_EMAIL || 'demo@demo.com');
+    } else if (meta.text.includes('phone') || meta.text.includes('tel') || meta.text.includes('mobile')) {
+      await field.fill('0987654321');
+    } else if (
+      meta.type === 'number' ||
+      meta.text.includes('zip') ||
+      meta.text.includes('postal') ||
+      meta.text.includes('pin') ||
+      meta.text.includes('code')
+    ) {
+      await field.fill('12345');
+    } else if (meta.text.includes('first')) {
+      await field.fill('John');
+    } else if (meta.text.includes('last')) {
+      await field.fill('Doe');
+    } else {
+      await field.fill('123 Main Street');
+    }
+  }
+}

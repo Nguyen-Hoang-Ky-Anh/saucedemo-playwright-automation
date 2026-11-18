@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { QaAutomationLabsCartPage } from '../../../pages/qa-automation-labs-cart.page';
-import { addTwoDistinctProducts, clearCart, expectCartProduct } from './cart.helper';
+import {
+  addDistinctProducts,
+  addTwoDistinctProducts,
+  clearCart,
+  expectCartProduct,
+} from './cart.helper';
 import type { AddedProduct } from './cart.helper';
 import { loginAsDemo } from '../product/product-auth.helper';
 
@@ -20,6 +25,39 @@ test.describe('Cart', () => {
     if (loggedIn) {
       await clearCart(page);
     }
+  });
+
+  // Ưu tiên P1, BVA (min+, n=1).
+  test('CT-01: Thêm 1 sản phẩm vào giỏ', async ({ page }) => {
+    const cartPage = new QaAutomationLabsCartPage(page);
+    let addedProducts: AddedProduct[] = [];
+
+    await test.step('1-3) Chọn 1 sản phẩm trên trang danh mục, bấm Add to Cart và kiểm tra icon giỏ hàng hiển thị số 1.', async () => {
+      addedProducts = await addDistinctProducts(page, 1);
+      expect(await cartPage.getCartBadgeCount()).toBe(1);
+    });
+
+    await cartPage.openCartByIcon();
+    const cartProducts = await cartPage.readProducts();
+    expect(cartProducts, 'Giỏ hàng phải có đúng 1 sản phẩm sau khi thêm.').toHaveLength(1);
+    expectCartProduct(cartProducts[0], addedProducts[0]);
+  });
+
+  // Ưu tiên P2, Theo yêu cầu.
+  test('CT-02: Thêm 2 sản phẩm khác nhau vào giỏ', async ({ page }) => {
+    const cartPage = new QaAutomationLabsCartPage(page);
+    let addedProducts: AddedProduct[] = [];
+
+    await test.step('1-3) Thêm lần lượt 2 sản phẩm khác nhau vào giỏ và kiểm tra icon giỏ hàng hiển thị số 2.', async () => {
+      addedProducts = await addDistinctProducts(page, 2);
+      expect(await cartPage.getCartBadgeCount()).toBe(2);
+    });
+
+    await cartPage.openCartByIcon();
+    const cartProducts = await cartPage.readProducts();
+    expect(cartProducts, 'Giỏ hàng phải có đúng 2 sản phẩm sau khi thêm.').toHaveLength(2);
+    expectCartProduct(cartProducts[0], addedProducts[0]);
+    expectCartProduct(cartProducts[1], addedProducts[1]);
   });
 
   test.describe('CT-03', () => {
