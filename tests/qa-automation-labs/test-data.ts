@@ -40,20 +40,21 @@ export interface BillingData {
 }
 
 export function getCheckoutTestData() {
+  const envOrDefault = (name: string, fallback: string) => process.env[name] || fallback;
   return {
     td05: {
-      firstName: requiredEnv('QA_CHECKOUT_TD05_FIRST_NAME'),
-      lastName: requiredEnv('QA_CHECKOUT_TD05_LAST_NAME'),
-      email: requiredEnv('QA_CHECKOUT_TD05_EMAIL'),
-      phone: requiredEnv('QA_CHECKOUT_TD05_PHONE'),
-      address: requiredEnv('QA_CHECKOUT_TD05_ADDRESS'),
-      city: requiredEnv('QA_CHECKOUT_TD05_CITY'),
-      state: requiredEnv('QA_CHECKOUT_TD05_STATE'),
-      zip: requiredEnv('QA_CHECKOUT_TD05_ZIP'),
-      country: requiredEnv('QA_CHECKOUT_TD05_COUNTRY'),
-      cardNumber: requiredEnv('QA_CHECKOUT_TD05_CARD_NUMBER'),
-      cardExpiry: requiredEnv('QA_CHECKOUT_TD05_CARD_EXPIRY'),
-      cardCvv: requiredEnv('QA_CHECKOUT_TD05_CARD_CVV'),
+      firstName: envOrDefault('QA_CHECKOUT_TD05_FIRST_NAME', 'John'),
+      lastName: envOrDefault('QA_CHECKOUT_TD05_LAST_NAME', 'Doe'),
+      email: envOrDefault('QA_CHECKOUT_TD05_EMAIL', 'demo@demo.com'),
+      phone: envOrDefault('QA_CHECKOUT_TD05_PHONE', '0912345678'),
+      address: envOrDefault('QA_CHECKOUT_TD05_ADDRESS', '123 Main St'),
+      city: envOrDefault('QA_CHECKOUT_TD05_CITY', 'Hanoi'),
+      state: envOrDefault('QA_CHECKOUT_TD05_STATE', 'Hanoi'),
+      zip: envOrDefault('QA_CHECKOUT_TD05_ZIP', '100000'),
+      country: envOrDefault('QA_CHECKOUT_TD05_COUNTRY', 'Vietnam'),
+      cardNumber: envOrDefault('QA_CHECKOUT_TD05_CARD_NUMBER', '1234567890123456'),
+      cardExpiry: envOrDefault('QA_CHECKOUT_TD05_CARD_EXPIRY', '12/28'),
+      cardCvv: envOrDefault('QA_CHECKOUT_TD05_CARD_CVV', '123'),
     } satisfies BillingData,
   };
 }
