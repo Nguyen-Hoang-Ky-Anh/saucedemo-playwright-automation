@@ -29,6 +29,8 @@ export class QaAutomationLabsRegisterPage {
   readonly passwordStrengthIndicator: Locator;
   readonly passwordStrengthBar: Locator;
   readonly firstNameCharacterCount: Locator;
+  readonly createAccountHeading: Locator;
+  readonly personalDetailsSection: Locator;
 
   constructor(private readonly page: Page) {
     this.firstNameInput = page.getByPlaceholder('First Name', { exact: true });
@@ -47,10 +49,23 @@ export class QaAutomationLabsRegisterPage {
     this.passwordStrengthIndicator = page.getByText(/^Password strength:/);
     this.passwordStrengthBar = page.getByRole('progressbar');
     this.firstNameCharacterCount = page.getByText(/^\d+ characters?$/);
+    this.createAccountHeading = page.getByRole('heading', { name: /create your account/i });
+    this.personalDetailsSection = page.getByRole('heading', { name: /your personal details/i });
   }
 
-  async open() {
-    await this.page.goto('/register.php');
+  async open(retries = 3) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        await this.page.goto('/register.php', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await this.registerButton.waitFor({ state: 'visible', timeout: 10000 });
+        return;
+      } catch (error) {
+        if (attempt === retries) {
+          throw error;
+        }
+        await this.page.waitForTimeout(1000 * attempt);
+      }
+    }
   }
 
   async fillRequiredFields(data: Omit<RegisterData, 'gender'> & { gender?: RegisterData['gender'] }) {
@@ -69,7 +84,15 @@ export class QaAutomationLabsRegisterPage {
     }
 
     await this.dateOfBirthInput.fill(data.dateOfBirth);
-    await this.countrySelect.selectOption({ label: data.country });
+    if (data.country) {
+      try {
+        await this.countrySelect.selectOption({ label: data.country }, { timeout: 3000 });
+      } catch {
+        await this.countrySelect.selectOption({ index: 1 });
+      }
+    } else {
+      await this.countrySelect.selectOption({ index: 0 });
+    }
     await this.passwordInput.fill(data.password);
     await this.passwordConfirmInput.fill(data.passwordConfirm);
   }

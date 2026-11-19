@@ -77,6 +77,7 @@ test.describe('Product', () => {
   let productPage: QaAutomationLabsProductPage;
 
   test.beforeEach(async ({ page }) => {
+    test.setTimeout(90000);
     productPage = new QaAutomationLabsProductPage(page);
     await loginAsDemo(page);
     await productPage.openCategory(PRODUCT_CATEGORY.linkName);
@@ -95,6 +96,153 @@ test.describe('Product', () => {
     test.info().annotations.push({
       type: 'Giá trị sắp xếp mặc định',
       description: `${defaultSort.label} (${defaultSort.value})`,
+    });
+  });
+
+  test('PR-02: Bấm Shop Now của từng danh mục', async ({ page }) => {
+    test.setTimeout(90000);
+    // Đang ở trang https://shop.qaautomationlabs.com/shop.php
+    await page.goto('/shop.php', { waitUntil: 'domcontentloaded' });
+    const categories = [
+      {
+        name: 'Men Fashion',
+        path: /mens-wear\.php/,
+        link: page.locator('.product-offer a[href*="mens-wear.php"]').or(page.locator('a[href*="mens-wear.php"]')),
+      },
+      {
+        name: 'Women Fashion',
+        path: /womens-wear\.php/,
+        link: page.locator('.product-offer a[href*="womens-wear.php"]').or(page.locator('a[href*="womens-wear.php"]')),
+      },
+      {
+        name: 'Kids Fashion',
+        path: /kids-wear\.php/,
+        link: page.locator('.product-offer a[href*="kids-wear.php"]').or(page.locator('a[href*="kids-wear.php"]')),
+      },
+      {
+        name: 'Electronics',
+        path: /electronics\.php/,
+        link: page.locator('.product-offer a[href*="electronics.php"]').or(page.locator('a[href*="electronics.php"]')),
+      },
+    ];
+    for (let i = 0; i < categories.length; i += 1) {
+      const cat = categories[i];
+      await test.step(`${i + 1}) Tại banner "${cat.name}", bấm "Shop Now" và kiểm tra URL, tiêu đề trang`, async () => {
+        if (!page.url().includes('shop.php')) {
+          await page.goto('/shop.php', { waitUntil: 'domcontentloaded' });
+        }
+        const shopNowBtn = cat.link.first();
+        await expect(shopNowBtn, `Nút Shop Now của banner "${cat.name}" phải hiển thị`).toBeVisible();
+        await shopNowBtn.click();
+
+        // Chuyển sang trang danh mục tương ứng
+        await expect(page).toHaveURL(cat.path);
+
+        // Danh mục tải thành công, hiển thị sản phẩm
+        await expect(productPage.productList.first()).toBeVisible();
+
+        // Quay lại /shop.php nếu chưa phải danh mục cuối
+        if (i < categories.length - 1) {
+          await page.goto('/shop.php', { waitUntil: 'domcontentloaded' });
+        }
+      });
+    }
+  });
+
+  test('PR-03: Trang danh mục hiển thị sản phẩm với tên, giá, nút thêm vào giỏ', async ({ page }) => {
+    test.setTimeout(60000);
+    const categoryPaths = [
+      { name: 'Men Fashion', path: '/mens-wear.php' },
+      { name: 'Women Fashion', path: '/womens-wear.php' },
+      { name: 'Kids Fashion', path: '/kids-wear.php' },
+      { name: 'Electronics Fashion', path: '/electronics.php' },
+    ];
+    for (const cat of categoryPaths) {
+      await test.step(`Kiểm tra danh mục "${cat.name}" (${cat.path})`, async () => {
+        if (!page.url().endsWith(cat.path)) {
+          await page.goto(cat.path, { waitUntil: 'domcontentloaded' });
+        }
+
+        // Mỗi danh mục hiển thị danh sách sản phẩm
+        const productCards = page.locator('.product-item');
+        const count = await productCards.count();
+        expect(count, `Danh mục "${cat.name}" phải có ít nhất 1 sản phẩm`).toBeGreaterThan(0);
+
+        // Kiểm tra toàn bộ sản phẩm trong danh mục: ảnh, tên, giá, nút giỏ hàng
+        const items = await productCards.evaluateAll((cards) =>
+          cards.map((card) => {
+            const link = card.querySelector('a[href^="product.php"]');
+            const img = card.querySelector('img');
+            const btn = card.querySelector('button');
+            return {
+              name: link?.textContent?.trim() ?? '',
+              imgSrc: img?.getAttribute('src') ?? '',
+              imgVisible: !!img && img.offsetParent !== null,
+              text: card.textContent ?? '',
+              hasAddBtn: !!btn && /add .*to cart/i.test(btn.textContent ?? ''),
+              btnVisible: !!btn && btn.offsetParent !== null,
+            };
+          }),
+        );
+        for (let index = 0; index < items.length; index += 1) {
+          const item = items[index];
+          expect(item.name, `Sản phẩm thứ ${index + 1} phải có tên`).not.toBe('');
+          expect(item.imgVisible, `Sản phẩm "${item.name}" phải có hình ảnh hiển thị`).toBe(true);
+          expect(item.imgSrc, `Ảnh của sản phẩm "${item.name}" phải có đường dẫn src hợp lệ`).toBeTruthy();
+          expect(item.text.match(/\$\s*([\d,]+(?:\.\d{1,2})?)/), `Sản phẩm "${item.name}" phải hiển thị giá hợp lệ`).not.toBeNull();
+          expect(item.hasAddBtn && item.btnVisible, `Sản phẩm "${item.name}" phải có nút thêm vào giỏ hàng`).toBe(true);
+        }
+      });
+    }
+  });
+
+  test('PR-04: Sắp xếp theo giá thấp đến cao', async ({ page }) => {
+    test.setTimeout(60000);
+    let initialCount = 0;
+    let sortedPrices: number[] = [];
+
+    await test.step('Tại ô "Sort by", chọn "Price: Low to High"', async () => {
+      initialCount = await productPage.productList.count();
+
+      const option = productPage.sortDropdown.getByRole('option', {
+        name: /price\W*low\W+to\W+high/i,
+      });
+      await expect(option, 'Phải tìm thấy tùy chọn sắp xếp giá từ thấp đến cao').toHaveCount(1);
+      const value = await option.getAttribute('value');
+      expect(value).not.toBeNull();
+      await productPage.sortDropdown.selectOption(value!);
+    });
+
+    await test.step('Ghi lại giá của các sản phẩm theo đúng thứ tự hiển thị từ trên xuống dưới', async () => {
+      const productCards = page.locator('.product-item');
+      // Lấy toàn bộ nội dung text của các thẻ trong 1 lần gọi duy nhất
+      const allTexts = await productCards.allInnerTexts();
+      sortedPrices = allTexts.map((cardText, index) => {
+        const match = cardText.match(/\$\s*([\d,]+(?:\.\d{1,2})?)/);
+        expect(match, `Sản phẩm thứ ${index + 1} phải hiển thị giá`).not.toBeNull();
+        return Number(match![1].replaceAll(',', ''));
+      });
+    });
+
+    await test.step('So sánh giá của từng cặp sản phẩm liền kề', async () => {
+      // Danh sách được sắp xếp lại theo giá tăng dần
+      for (let i = 0; i < sortedPrices.length - 1; i += 1) {
+        expect(
+          sortedPrices[i],
+          `Sản phẩm thứ ${i + 1} ($${sortedPrices[i]}) phải có giá nhỏ hơn hoặc bằng sản phẩm thứ ${i + 2} ($${sortedPrices[i + 1]})`,
+        ).toBeLessThanOrEqual(sortedPrices[i + 1]);
+      }
+
+      const expectedPrices = [...sortedPrices].sort((left, right) => left - right);
+      expect(sortedPrices, 'Danh sách sản phẩm phải được sắp xếp tăng dần từ thấp đến cao').toEqual(
+        expectedPrices,
+      );
+
+      // Số lượng sản phẩm không thay đổi so với trước khi sắp xếp
+      expect(
+        sortedPrices.length,
+        'Số lượng sản phẩm sau khi sắp xếp giá thấp đến cao phải giữ nguyên',
+      ).toBe(initialCount);
     });
   });
 

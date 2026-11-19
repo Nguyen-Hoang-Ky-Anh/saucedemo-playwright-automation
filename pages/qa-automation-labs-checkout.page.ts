@@ -1,4 +1,5 @@
 import { expect, Locator, Page } from '@playwright/test';
+import type { BillingData } from '../tests/qa-automation-labs/test-data';
 
 export interface CheckoutFieldObservation {
   label: string;
@@ -26,27 +27,204 @@ export class QaAutomationLabsCheckoutPage {
   readonly checkoutForm: Locator;
   readonly inputFields: Locator;
   readonly continueButton: Locator;
+  readonly placeOrderButton: Locator;
   readonly errorMessages: Locator;
   readonly cancelBackButton: Locator;
+  readonly confirmationHeading: Locator;
 
   constructor(private readonly page: Page) {
-    // TODO: Xác minh tên và loại điều khiển của nút checkout trên site thật.
     this.checkoutButton = page.getByRole('link', { name: /proceed to checkout/i });
-    // TODO: Xác minh form thông tin checkout có đúng một phần tử form.
     this.checkoutForm = page
       .locator('form')
       .filter({ has: page.getByRole('spinbutton') });
     this.inputFields = this.checkoutForm
       .getByRole('textbox')
       .or(this.checkoutForm.getByRole('spinbutton'));
-    // TODO: Xác minh nhãn nút chuyển tiếp checkout trên site thật.
     this.continueButton = page.getByRole('button', { name: /continue|next/i });
-    // TODO: Xác minh lỗi checkout dùng role="alert".
-    this.errorMessages = page.getByRole('alert');
-    // TODO: Xác minh nhãn điều hướng quay lại/hủy checkout trên site thật.
+    this.placeOrderButton = page
+      .getByRole('button', { name: /place\s*order/i })
+      .or(page.getByRole('link', { name: /place\s*order/i }));
+    this.errorMessages = page
+      .getByRole('alert')
+      .or(page.locator('.alert, .error, .invalid-feedback, [class*="error"], [class*="alert"]'));
     this.cancelBackButton = page
       .getByRole('button', { name: /cancel|back/i })
       .or(page.getByRole('link', { name: /cancel|back/i }));
+    // "Thank You for Your Order!" or similar confirmation
+    this.confirmationHeading = page
+      .getByRole('heading', {
+        name: /thank\s*you|order\s*(success|confirm|placed)|đặt\s*hàng\s*thành\s*công/i,
+      })
+      .or(page.getByText(/thank you for your order/i));
+  }
+
+  /**
+   * Fills the Billing Address form using structured TD-05 data.
+   * Maps each visible input to the right value by inspecting label/name/placeholder.
+   */
+  async fillBillingForm(data: BillingData): Promise<void> {
+    await this.expectInformationStep();
+    const count = await this.inputFields.count();
+    for (let i = 0; i < count; i++) {
+      const field = this.inputFields.nth(i);
+      const meta = await field.evaluate((el) => {
+        const input = el as HTMLInputElement | HTMLTextAreaElement;
+        const labels = Array.from(input.labels ?? [])
+          .map((l) => l.innerText.trim())
+          .join(' ');
+        return {
+          text: `${labels} ${input.placeholder ?? ''} ${input.name ?? ''} ${input.id ?? ''}`.toLowerCase(),
+          type: input.getAttribute('type') ?? 'text',
+        };
+      });
+
+      const t = meta.text;
+      let value = '';
+
+      if (t.includes('middle') || t.includes('mname')) {
+        value = data.middleName || data.firstName;
+      } else if (t.includes('first') || t.includes('fname')) {
+        value = data.firstName;
+      } else if (t.includes('last') || t.includes('lname') || t.includes('surname')) {
+        value = data.lastName;
+      } else if (meta.type === 'email' || t.includes('email') || t.includes('mail')) {
+        value = data.email;
+      } else if (t.includes('phone') || t.includes('tel') || t.includes('mobile')) {
+        value = data.phone;
+      } else if (
+        t.includes('card') && (t.includes('number') || t.includes('num') || t.includes('no'))
+      ) {
+        value = data.cardNumber;
+      } else if (t.includes('expir') || t.includes('exp') || t.includes('mm/') || t.includes('yy')) {
+        value = data.cardExpiry;
+      } else if (t.includes('cvv') || t.includes('cvc') || t.includes('security') || t.includes('code')) {
+        value = data.cardCvv;
+      } else if (
+        meta.type === 'number' ||
+        t.includes('zip') ||
+        t.includes('postal') ||
+        t.includes('pin')
+      ) {
+        value = data.zip;
+      } else if (t.includes('city') || t.includes('town')) {
+        value = data.city;
+      } else if (t.includes('state') || t.includes('province') || t.includes('region')) {
+        value = data.state;
+      } else if (t.includes('country')) {
+        value = data.country;
+      } else if (
+        t.includes('address') ||
+        t.includes('street') ||
+        t.includes('addr')
+      ) {
+        value = data.address;
+      } else {
+        // fallback: fill with firstName
+        value = data.firstName;
+      }
+
+      if (meta.type === 'number') {
+        const numeric = value.replace(/\D/g, '');
+        await field.fill(numeric);
+      } else {
+        await field.fill(value);
+      }
+    }
+  }
+
+  /**
+   * Fills billing form with one field deliberately left empty (by fieldIndex).
+   * Returns the label of the field that was left empty.
+   */
+  async fillBillingFormExceptOne(data: BillingData, omitIndex: number): Promise<string> {
+    await this.expectInformationStep();
+    const count = await this.inputFields.count();
+    let omittedLabel = `field[${omitIndex}]`;
+
+    for (let i = 0; i < count; i++) {
+      const field = this.inputFields.nth(i);
+      const meta = await field.evaluate((el) => {
+        const input = el as HTMLInputElement | HTMLTextAreaElement;
+        const labels = Array.from(input.labels ?? [])
+          .map((l) => l.innerText.trim())
+          .join(' ');
+        return {
+          text: `${labels} ${input.placeholder ?? ''} ${input.name ?? ''} ${input.id ?? ''}`.toLowerCase(),
+          label: labels || input.placeholder || input.name || input.id || `field[${i}]`,
+          type: input.getAttribute('type') ?? 'text',
+        };
+      });
+
+      if (i === omitIndex) {
+        omittedLabel = meta.label;
+        await field.clear();
+        continue;
+      }
+
+      const t = meta.text;
+      let value = '';
+      if (t.includes('middle') || t.includes('mname')) value = data.middleName || data.firstName;
+      else if (t.includes('first') || t.includes('fname')) value = data.firstName;
+      else if (t.includes('last') || t.includes('lname') || t.includes('surname')) value = data.lastName;
+      else if (meta.type === 'email' || t.includes('email')) value = data.email;
+      else if (t.includes('phone') || t.includes('tel') || t.includes('mobile')) value = data.phone;
+      else if (t.includes('card') && (t.includes('number') || t.includes('num'))) value = data.cardNumber;
+      else if (t.includes('expir') || t.includes('exp')) value = data.cardExpiry;
+      else if (t.includes('cvv') || t.includes('cvc') || t.includes('security')) value = data.cardCvv;
+      else if (meta.type === 'number' || t.includes('zip') || t.includes('postal') || t.includes('pin')) value = data.zip;
+      else if (t.includes('city') || t.includes('town')) value = data.city;
+      else if (t.includes('state') || t.includes('province')) value = data.state;
+      else if (t.includes('country')) value = data.country;
+      else if (t.includes('address') || t.includes('street')) value = data.address;
+      else value = data.firstName;
+
+      if (meta.type === 'number') await field.fill(value.replace(/\D/g, ''));
+      else await field.fill(value);
+    }
+
+    return omittedLabel;
+  }
+
+  /**
+   * Counts the number of required billing form fields.
+   */
+  async countRequiredFields(): Promise<number> {
+    await this.expectInformationStep();
+    return this.inputFields.evaluateAll((els) =>
+      els.filter((el) => (el as HTMLInputElement).required || el.getAttribute('required') !== null).length,
+    );
+  }
+
+  /**
+   * Clicks Place Order button and waits for navigation/response.
+   */
+  async clickPlaceOrder(): Promise<void> {
+    await expect(this.placeOrderButton.first(), 'Nút Place Order phải hiển thị.').toBeVisible({ timeout: 15000 });
+    await this.placeOrderButton.first().click();
+  }
+
+  /**
+   * Returns all visible error messages on the page.
+   */
+  async getVisibleErrors(): Promise<string[]> {
+    const errors: string[] = [];
+    const count = await this.errorMessages.count();
+    for (let i = 0; i < count; i++) {
+      const el = this.errorMessages.nth(i);
+      if (await el.isVisible()) {
+        const text = (await el.innerText()).trim();
+        if (text) errors.push(text);
+      }
+    }
+    return errors;
+  }
+
+  /**
+   * Checks if the confirmation/success page is shown.
+   */
+  async isOrderConfirmed(): Promise<boolean> {
+    if (this.page.url().includes('thanks.php')) return true;
+    return this.confirmationHeading.isVisible().catch(() => false);
   }
 
   async expectInformationStep(): Promise<void> {

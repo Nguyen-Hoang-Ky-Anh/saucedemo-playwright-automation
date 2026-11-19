@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { QaAutomationLabsCartPage } from '../../../pages/qa-automation-labs-cart.page';
 import { QaAutomationLabsLoginPage } from '../../../pages/qa-automation-labs-login.page';
+import { QaAutomationLabsRegisterPage } from '../../../pages/qa-automation-labs-register.page';
 import { getDemoCredentials } from '../test-data';
 
 test.describe('Login', () => {
@@ -150,5 +151,19 @@ test.describe('Login', () => {
     await expect(loginPage.emailInput).toHaveValue(demoCredentials.email);
     await expect(loginPage.passwordInput).toHaveValue(demoCredentials.password);
     await expect(loginPage.passwordInput).toHaveAttribute('type', 'password');
+  });
+
+  test('LG-12: Link "Register Here"', async ({ page }) => {
+    const registerPage = new QaAutomationLabsRegisterPage(page);
+    await expect(loginPage.signInHeading).toBeVisible();
+    await expect(loginPage.newUserText).toBeVisible();
+
+    await expect(loginPage.registerHereLink).toBeVisible();
+    await loginPage.registerHereLink.click();
+
+    await expect(page).toHaveURL(/.*\/register\.php/);
+
+    await expect(registerPage.createAccountHeading).toBeVisible();
+    await expect(registerPage.personalDetailsSection).toBeVisible();
   });
 });

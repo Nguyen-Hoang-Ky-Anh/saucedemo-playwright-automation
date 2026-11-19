@@ -2,12 +2,17 @@ import { expect, test } from '@playwright/test';
 import { QaAutomationLabsCartPage } from '../../../pages/qa-automation-labs-cart.page';
 import {
   addDistinctProducts,
+  addOneProduct,
   addTwoDistinctProducts,
   clearCart,
   expectCartProduct,
 } from './cart.helper';
 import type { AddedProduct } from './cart.helper';
 import { loginAsDemo } from '../product/product-auth.helper';
+import { QaAutomationLabsLoginPage } from '../../../pages/qa-automation-labs-login.page';
+import { getDemoCredentials } from '../test-data';
+
+const MENS_WEAR_PATH = '/mens-wear.php';
 
 test.describe('Cart', () => {
   test.describe.configure({ mode: 'serial' });
@@ -201,6 +206,77 @@ test.describe('Cart', () => {
             displayedTotalCents,
             'Tổng tiền hiển thị phải bằng tổng (đơn giá × số lượng) của các dòng cộng lại',
         ).toBe(expectedTotalCents);
+      });
+    });
+  });
+
+  test.describe('CT-09', () => {
+    test.beforeEach(async ({ page }) => {
+      test.setTimeout(120000);
+      page.setDefaultNavigationTimeout(60000);
+      page.setDefaultTimeout(60000);
+      // Đang ở trang danh mục Men Fashion (https://shop.qaautomationlabs.com/mens-wear.php)
+      await page.goto(MENS_WEAR_PATH, { waitUntil: 'domcontentloaded' });
+      expect(new URL(page.url()).pathname).toBe(MENS_WEAR_PATH);
+    });
+
+    test.afterEach(async () => {
+    });
+
+    test('CT-09: Đăng xuất rồi đăng nhập lại', async ({ page }) => {
+      test.setTimeout(120000);
+      let addedProduct!: AddedProduct;
+      const cartPage = new QaAutomationLabsCartPage(page);
+      const loginPage = new QaAutomationLabsLoginPage(page);
+      const credentials = getDemoCredentials();
+      let recordedProductName = '';
+      let recordedBadgeCount = 0;
+
+      await test.step('Thêm 1 sản phẩm bất kỳ vào giỏ hàng; ghi nhớ tên sản phẩm và số hiển thị trên biểu tượng giỏ hàng', async () => {
+        addedProduct = await addOneProduct(page);
+        recordedProductName = addedProduct.name;
+        recordedBadgeCount = await cartPage.getCartBadgeCount();
+        expect(recordedProductName, 'Tên sản phẩm được thêm không được rỗng.').not.toBe('');
+        expect(recordedBadgeCount, 'Số hiển thị trên biểu tượng giỏ hàng phải là 1 sau khi thêm.').toBe(1);
+      });
+
+      await test.step('Đăng xuất bằng chức năng Logout của website', async () => {
+        const logoutButton = page.getByRole('button', { name: 'Logout' });
+        await expect(logoutButton, 'Nút Logout phải hiển thị khi đã đăng nhập.').toBeVisible();
+        await logoutButton.click();
+        await expect(loginPage.loginButton, 'Phải chuyển về trang đăng nhập sau khi logout.').toBeVisible({ timeout: 30000 });
+      });
+
+      await test.step('Đăng nhập lại bằng tài khoản demo', async () => {
+        await loginPage.emailInput.fill(credentials.email);
+        await loginPage.passwordInput.fill(credentials.password);
+        await loginPage.loginButton.click();
+        const logoutButton = page.getByRole('button', { name: 'Logout' });
+        await expect(logoutButton, 'Đăng nhập lại phải thành công và nút Logout hiển thị.').toBeVisible({ timeout: 25000 });
+      });
+
+      await test.step('Quan sát số hiển thị trên biểu tượng giỏ hàng', async () => {
+        await expect
+          .poll(async () => cartPage.getCartBadgeCount(), {
+            message: 'Số hiển thị trên biểu tượng giỏ hàng phải giữ nguyên sau khi đăng nhập lại.',
+            timeout: 10000,
+          })
+          .toBe(recordedBadgeCount);
+      });
+
+      await test.step('Bấm biểu tượng giỏ hàng /cart.php và kiểm tra danh sách sản phẩm', async () => {
+        await cartPage.openCartByIcon();
+        expect(new URL(page.url()).pathname).toBe('/cart.php');
+        await expect(
+          cartPage.cartProducts,
+          'Giỏ hàng phải có đúng 1 dòng sản phẩm sau khi đăng nhập lại.',
+        ).toHaveCount(1);
+        const cartProducts = await cartPage.readProducts();
+
+        expect(cartProducts, 'Giỏ hàng phải được giữ nguyên với đúng 1 sản phẩm.').toHaveLength(1);
+        expect(cartProducts[0].name, 'Tên sản phẩm trong giỏ hàng phải trùng khớp với sản phẩm đã thêm.').toBe(recordedProductName);
+        expect(cartProducts[0].quantity, 'Số lượng sản phẩm trong giỏ hàng phải còn nguyên (bằng 1).').toBe(1);
+        expectCartProduct(cartProducts[0], addedProduct);
       });
     });
   });

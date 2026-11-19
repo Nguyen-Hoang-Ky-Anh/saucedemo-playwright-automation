@@ -23,6 +23,42 @@ export function getDemoCredentials() {
   };
 }
 
+export interface BillingData {
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  cardNumber: string;
+  cardExpiry: string;
+  cardCvv: string;
+}
+
+export function getCheckoutTestData() {
+  const envOrDefault = (name: string, fallback: string) => process.env[name] || fallback;
+  return {
+    td05: {
+      firstName: envOrDefault('QA_CHECKOUT_TD05_FIRST_NAME', 'John'),
+      lastName: envOrDefault('QA_CHECKOUT_TD05_LAST_NAME', 'Doe'),
+      email: envOrDefault('QA_CHECKOUT_TD05_EMAIL', 'demo@demo.com'),
+      phone: envOrDefault('QA_CHECKOUT_TD05_PHONE', '0912345678'),
+      address: envOrDefault('QA_CHECKOUT_TD05_ADDRESS', '123 Main St'),
+      city: envOrDefault('QA_CHECKOUT_TD05_CITY', 'Hanoi'),
+      state: envOrDefault('QA_CHECKOUT_TD05_STATE', 'Hanoi'),
+      zip: envOrDefault('QA_CHECKOUT_TD05_ZIP', '100000'),
+      country: envOrDefault('QA_CHECKOUT_TD05_COUNTRY', 'Vietnam'),
+      cardNumber: envOrDefault('QA_CHECKOUT_TD05_CARD_NUMBER', '1234567890123456'),
+      cardExpiry: envOrDefault('QA_CHECKOUT_TD05_CARD_EXPIRY', '12/28'),
+      cardCvv: envOrDefault('QA_CHECKOUT_TD05_CARD_CVV', '123'),
+    } satisfies BillingData,
+  };
+}
+
 export function getRegisterTestData() {
   const { email } = getDemoCredentials();
   return {

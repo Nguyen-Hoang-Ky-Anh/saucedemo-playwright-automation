@@ -88,6 +88,64 @@ test.describe('Filter', () => {
     initialSnapshot = snapshotProducts(await filterPage.readProducts());
   });
 
+  test('FL-01: Lọc theo Type (Formal, Footwear) ở Men\'s Wear', async () => {
+    test.setTimeout(60000);
+    let initialCount = 0;
+
+    await test.step('Ghi nhận tổng số sản phẩm đang hiển thị', async () => {
+      initialCount = initialSnapshot.count;
+      expect(initialCount, 'Số lượng sản phẩm ban đầu phải lớn hơn 0.').toBeGreaterThan(0);
+    });
+
+    await test.step('Tại "Filter by Type", chọn "Formal" và quan sát danh sách', async () => {
+      await filterPage.selectFilterOption('Type', 'Formal');
+      await filterPage.waitForProductListToSettle();
+      const formalProducts = await filterPage.readProducts();
+
+      expect(formalProducts.length, 'Phải có sản phẩm thuộc loại Formal hiển thị.').toBeGreaterThan(0);
+      for (const product of formalProducts) {
+        expect(
+          product.displayedAttributes.Type?.toLowerCase(),
+          `Sản phẩm "${product.name}" phải thuộc loại Formal.`,
+        ).toBe('formal');
+      }
+    });
+
+    await test.step('Bỏ chọn "Formal"; chọn "Footwear" và quan sát danh sách', async () => {
+      await filterPage.unselectFilterOption('Type', 'Formal');
+      await filterPage.selectFilterOption('Type', 'Footwear');
+      await filterPage.waitForProductListToSettle();
+      const footwearProducts = await filterPage.readProducts();
+
+      if (footwearProducts.length > 0) {
+        for (const product of footwearProducts) {
+          expect(
+            product.displayedAttributes.Type?.toLowerCase(),
+            `Sản phẩm "${product.name}" phải thuộc loại Footwear.`,
+          ).toBe('footwear');
+        }
+      } else {
+        await filterPage.expectEmptyResults();
+      }
+    });
+
+    await test.step('Bỏ chọn "Footwear" và quan sát danh sách', async () => {
+      await filterPage.unselectFilterOption('Type', 'Footwear');
+      await filterPage.waitForProductListToSettle();
+      const resetProducts = await filterPage.readProducts();
+      const resetSnapshot = snapshotProducts(resetProducts);
+
+      expect(
+        resetSnapshot.count,
+        'Số lượng sản phẩm sau khi bỏ chọn bộ lọc phải trở về đầy đủ như ban đầu.',
+      ).toBe(initialCount);
+      expect(
+        resetSnapshot.names,
+        'Danh sách tên sản phẩm phải trở về đầy đủ như ban đầu.',
+      ).toEqual(initialSnapshot.names);
+    });
+  });
+
   // Ưu tiên P2, BVA.
   test('FL-02: Kiểm tra lọc theo từng khoảng giá ($0-100 ... $401-500)', async () => {
     for (const priceLabel of PRICE_RANGES) {

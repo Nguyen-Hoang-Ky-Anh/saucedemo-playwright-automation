@@ -134,6 +134,10 @@ export class QaAutomationLabsFilterPage {
     }
   }
 
+  async unselectFilterOption(groupName: FilterGroup, optionName: string): Promise<void> {
+    return this.deselectFilterOption(groupName, optionName);
+  }
+
   async readProducts(): Promise<DisplayedProduct[]> {
     const productCount = await this.productCards.count();
     const products: DisplayedProduct[] = [];
