@@ -26,8 +26,10 @@ export class QaAutomationLabsCartPage {
   }
 
   async openCartByIcon(): Promise<void> {
-    await expect(this.cartIcon, 'Icon giỏ hàng phải có đúng một liên kết.').toHaveCount(1);
-    await this.cartIcon.click();
+    // Có thể có cả icon desktop và mobile; click icon đang visible
+    const visibleCartIcon = this.cartIcon.first();
+    await expect(visibleCartIcon, 'Icon giỏ hàng phải hiển thị.').toBeVisible({ timeout: 10000 });
+    await visibleCartIcon.click();
     await expect(this.page).toHaveURL(/\/cart\.php(?:[?#]|$)/);
   }
 

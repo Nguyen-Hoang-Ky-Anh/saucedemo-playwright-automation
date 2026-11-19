@@ -23,6 +23,41 @@ export function getDemoCredentials() {
   };
 }
 
+export interface BillingData {
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  cardNumber: string;
+  cardExpiry: string;
+  cardCvv: string;
+}
+
+export function getCheckoutTestData() {
+  return {
+    td05: {
+      firstName: requiredEnv('QA_CHECKOUT_TD05_FIRST_NAME'),
+      lastName: requiredEnv('QA_CHECKOUT_TD05_LAST_NAME'),
+      email: requiredEnv('QA_CHECKOUT_TD05_EMAIL'),
+      phone: requiredEnv('QA_CHECKOUT_TD05_PHONE'),
+      address: requiredEnv('QA_CHECKOUT_TD05_ADDRESS'),
+      city: requiredEnv('QA_CHECKOUT_TD05_CITY'),
+      state: requiredEnv('QA_CHECKOUT_TD05_STATE'),
+      zip: requiredEnv('QA_CHECKOUT_TD05_ZIP'),
+      country: requiredEnv('QA_CHECKOUT_TD05_COUNTRY'),
+      cardNumber: requiredEnv('QA_CHECKOUT_TD05_CARD_NUMBER'),
+      cardExpiry: requiredEnv('QA_CHECKOUT_TD05_CARD_EXPIRY'),
+      cardCvv: requiredEnv('QA_CHECKOUT_TD05_CARD_CVV'),
+    } satisfies BillingData,
+  };
+}
+
 export function getRegisterTestData() {
   const { email } = getDemoCredentials();
   return {

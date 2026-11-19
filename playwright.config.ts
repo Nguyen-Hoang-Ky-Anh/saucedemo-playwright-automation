@@ -43,7 +43,14 @@ export default defineConfig({
         {
           name: '6-qaautomationlabs',
           testDir: qaAutomationLabsTestDir,
-          use: { ...chromium, baseURL: qaAutomationLabsBaseURL },
+          use: {
+            ...chromium,
+            baseURL: qaAutomationLabsBaseURL,
+            ignoreHTTPSErrors: true,
+            launchOptions: {
+              args: ['--ignore-certificate-errors'],
+            },
+          },
         },
       ]
       : [
@@ -55,7 +62,14 @@ export default defineConfig({
         {
           name: 'qaautomationlabs',
           testDir: qaAutomationLabsTestDir,
-          use: { ...chromium, baseURL: qaAutomationLabsBaseURL },
+          use: {
+            ...chromium,
+            baseURL: qaAutomationLabsBaseURL,
+            ignoreHTTPSErrors: true,
+            launchOptions: {
+              args: ['--ignore-certificate-errors'],
+            },
+          },
         },
       ],
 });

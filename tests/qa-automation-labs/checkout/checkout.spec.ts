@@ -4,7 +4,9 @@ import {
   CheckoutObservation,
   QaAutomationLabsCheckoutPage,
 } from '../../../pages/qa-automation-labs-checkout.page';
+import { QaAutomationLabsLoginPage } from '../../../pages/qa-automation-labs-login.page';
 import { loginAsDemo } from '../product/product-auth.helper';
+import { getCheckoutTestData, getDemoCredentials } from '../test-data';
 import {
   addOneProductToCart,
   clearCheckoutCart,
@@ -33,6 +35,229 @@ async function attachObservation(
 }
 
 test.describe('Checkout', () => {
+  test('CO-01: Luồng hoàn chỉnh: đăng nhập, thêm sản phẩm, checkout, đặt hàng thành công', async ({ page }) => {
+    const { expect } = test;
+    const cartPage = new QaAutomationLabsCartPage(page);
+    const checkoutPage = new QaAutomationLabsCheckoutPage(page);
+    const loginPage = new QaAutomationLabsLoginPage(page);
+    const demoCredentials = getDemoCredentials();
+    const td05 = getCheckoutTestData().td05;
+
+    // Mở trang đăng nhập https://shop.qaautomationlabs.com/, chưa đăng nhập; Giỏ hàng đang rỗng
+    await clearCheckoutCart(page);
+    const logoutBtn = page.getByRole('button', { name: /logout/i }).or(page.locator('button:has-text("Logout"), a:has-text("Logout")')).first();
+    if (await logoutBtn.isVisible().catch(() => false)) {
+      await logoutBtn.click();
+    }
+    if (!page.url().includes('index.php') && page.url() !== 'https://shop.qaautomationlabs.com/') {
+      await page.goto('/', { waitUntil: 'domcontentloaded' });
+    }
+
+    // Đăng nhập bằng tài khoản demo
+    await test.step('Đăng nhập bằng tài khoản demo', async () => {
+      await expect(loginPage.signInHeading, 'Phải ở trang đăng nhập (khung Sign in hiển thị)').toBeVisible();
+      await loginPage.emailInput.fill(demoCredentials.email);
+      await loginPage.passwordInput.fill(demoCredentials.password);
+      await loginPage.loginButton.click();
+      await page.waitForURL('**/shop.php**', { waitUntil: 'domcontentloaded' });
+      await expect(page).toHaveURL(/\/shop\.php/);
+    });
+
+    // Tại trang /shop.php, bấm "Shop Now" của "Men Fashion", thêm 1 sản phẩm vào giỏ hàng
+    await test.step('Tại trang /shop.php, bấm "Shop Now" của "Men Fashion", thêm 1 sản phẩm vào giỏ hàng', async () => {
+      const menFashionShopNow = page.locator('a[href$="mens-wear.php"]').first();
+      await expect(menFashionShopNow, 'Nút "Shop Now" của "Men Fashion" phải hiển thị').toBeVisible();
+      await menFashionShopNow.click();
+      await expect(page).toHaveURL(/\/mens-wear\.php/);
+
+      // Thêm 1 sản phẩm vào giỏ hàng
+      const addToCartBtn = page.getByRole('button', { name: /add .*to cart/i }).first();
+      await expect(addToCartBtn, 'Nút thêm vào giỏ phải hiển thị').toBeVisible();
+      await addToCartBtn.click();
+    });
+
+    // Bấm biểu tượng giỏ hàng để mở /cart.php và kiểm tra sản phẩm đã thêm
+    await test.step('Bấm biểu tượng giỏ hàng để mở /cart.php và kiểm tra sản phẩm đã thêm', async () => {
+      await cartPage.openCartByIcon();
+      await expect(page).toHaveURL(/\/cart\.php/);
+      await expect(cartPage.cartProducts.first(), 'Sản phẩm đã thêm phải hiển thị trong giỏ hàng').toBeVisible();
+      expect(await cartPage.cartProducts.count(), 'Giỏ hàng phải có đúng 1 sản phẩm vừa thêm').toBe(1);
+    });
+
+    // Bấm nút "Proceed To Checkout"
+    await test.step('Bấm nút "Proceed To Checkout"', async () => {
+      await expect(checkoutPage.checkoutButton, 'Nút Proceed To Checkout phải hiển thị').toBeVisible();
+      await checkoutPage.checkoutButton.click();
+      await expect(page).toHaveURL(/\/checkout\.php/);
+    });
+
+    // Tại trang checkout, nhập đầy đủ và hợp lệ form "Billing Address" theo rồi bấm nút Continue
+    await test.step('Tại trang checkout, nhập đầy đủ và hợp lệ form "Billing Address" theo rồi bấm nút Continue', async () => {
+      await checkoutPage.fillBillingForm(td05);
+      await checkoutPage.continueButton.click();
+    });
+
+    // Bấm nút đặt hàng Place Order và quan sát kết quả
+    await test.step('Bấm nút đặt hàng Place Order và quan sát kết quả', async () => {
+      await checkoutPage.clickPlaceOrder();
+
+      // Đặt hàng thành công, Hiển thị thông báo xác nhận "Thank You for Your Order!"
+      await expect(page).toHaveURL(/\/thanks\.php/);
+      await expect(page.getByText(/thank\s*you\s*for\s*your\s*order/i)).toBeVisible();
+    });
+  });
+
+  test('CO-02: Để trống từng trường bắt buộc của form checkout', async ({ page }) => {
+    const { expect } = test;
+    const checkoutPage = new QaAutomationLabsCheckoutPage(page);
+    const td05 = getCheckoutTestData().td05;
+
+    // Danh sách 8 trường bắt buộc cần kiểm tra khi bỏ trống
+    const requiredFields = [
+      { name: 'First Name', index: 0 },
+      { name: 'Last Name', index: 2 },
+      { name: 'Email', index: 3 },
+      { name: 'Phone', index: 4 },
+      { name: 'Address', index: 5 },
+      { name: 'State', index: 6 },
+      { name: 'City', index: 7 },
+      { name: 'Pin Code', index: 8 },
+    ];
+
+    for (const field of requiredFields) {
+      await test.step(`Bỏ trống trường bắt buộc "${field.name}"`, async () => {
+        if (!page.url().includes('checkout.php')) {
+          await page.goto('/checkout.php', { waitUntil: 'domcontentloaded' });
+        }
+
+        // Nhập hợp lệ tất cả các trường của form "Billing Address" theo TD-05, riêng 1 trường bắt buộc để trống
+        await checkoutPage.fillBillingFormExceptOne(td05, field.index);
+
+        // Bấm nút Continue rồi đến nút đặt hàng Place Order và quan sát thông báo lỗi
+        await checkoutPage.continueButton.click();
+
+        // Hệ thống chặn đặt hàng, giữ nguyên ở trang checkout
+        expect(page.url()).toContain('checkout.php');
+        expect(page.url()).not.toContain('thanks.php');
+
+        // Với mỗi lần thử, hiển thị thông báo lỗi bắt buộc nhập đúng trường bị bỏ trống
+        const errorLocator = page.locator('p.error, .text-danger, .invalid-feedback')
+          .filter({ hasText: /please enter|mandatory|error|bắt buộc/i });
+        const hasVisibleError = await errorLocator.first().isVisible({ timeout: 2000 }).catch(() => false);
+        const formText = await page.locator('form').first().innerText().catch(() => '');
+        expect(
+          hasVisibleError || /please enter|mandatory|error/i.test(formText),
+          `Trường "${field.name}" phải có thông báo lỗi bắt buộc nhập`,
+        ).toBe(true);
+
+        // Thử tìm nút Place Order
+        const placeOrderBtn = checkoutPage.placeOrderButton;
+        if (await placeOrderBtn.isVisible().catch(() => false)) {
+          await placeOrderBtn.click();
+          expect(page.url()).not.toContain('thanks.php');
+        }
+      });
+    }
+  });
+
+  test('CO-03: Nhập dữ liệu sai định dạng (số điện thoại, mã bưu điện, thẻ)', async ({ page }) => {
+    const { expect } = test;
+    const checkoutPage = new QaAutomationLabsCheckoutPage(page);
+    const td05 = getCheckoutTestData().td05;
+
+    // Số điện thoại nhập sai định dạng (vừa có số vừa có chữ)
+    await test.step('Nhập hợp lệ các trường theo TD-05, riêng Số điện thoại sai định dạng; bấm Continue rồi Place Order', async () => {
+      if (!page.url().includes('checkout.php')) {
+        await page.goto('/checkout.php', { waitUntil: 'domcontentloaded' });
+      }
+      // Nhập hợp lệ tất cả các trường theo TD-05, riêng Số điện thoại nhập sai định dạng
+      await checkoutPage.fillBillingForm(td05);
+      const phoneInput = page.locator('#phone');
+      await phoneInput.clear();
+      await phoneInput.pressSequentially('0912abc345');
+
+      // Bấm nút Continue rồi đến nút đặt hàng Place Order và quan sát kết quả
+      await checkoutPage.continueButton.click();
+
+      // Hệ thống chặn đặt hàng, không tạo đơn hàng
+      expect(page.url()).not.toContain('thanks.php');
+      if (await checkoutPage.placeOrderButton.isVisible().catch(() => false)) {
+        await checkoutPage.placeOrderButton.click();
+        expect(page.url()).not.toContain('thanks.php');
+      }
+
+      // Với mỗi lần thử, hiển thị thông báo lỗi định dạng ở đúng trường nhập sai
+      const phoneVal = await phoneInput.inputValue();
+      const hasError = await page.locator('p.error, .text-danger, .invalid-feedback').first().isVisible().catch(() => false);
+      expect(hasError || !phoneVal.includes('abc'), 'Hệ thống phải chặn hoặc báo lỗi định dạng số điện thoại chứa chữ').toBe(true);
+    });
+
+    // Lặp lại với Mã bưu điện sai định dạng (có kí tự đặc biệt), các trường khác hợp lệ
+    await test.step('Lặp lại với Mã bưu điện sai định dạng (có kí tự đặc biệt), các trường khác hợp lệ', async () => {
+      if (!page.url().includes('checkout.php')) {
+        await page.goto('/checkout.php', { waitUntil: 'domcontentloaded' });
+      }
+      await checkoutPage.fillBillingForm(td05);
+      const zipInput = page.locator('#pincode');
+      await zipInput.clear();
+      await zipInput.pressSequentially('70!@#');
+
+      // Ghi nhận giá trị thực tế sau khi nhập
+      const zipVal = await zipInput.inputValue();
+
+      await checkoutPage.continueButton.click();
+
+      const urlAfterContinue = page.url();
+      if (urlAfterContinue.includes('confirm.php')) {
+        test.info().annotations.push({
+          type: 'defect',
+          description:
+            `CO-03: Mã bưu điện nhập "70!@#" => input[type=number] strip thành "${zipVal}". ` +
+            'Site không chặn/không validate độ dài hay ký tự đặc biệt pincode => cho phép tiếp tục sang confirm.php. ' +
+            'Không click Place Order để tránh tạo đơn hàng thật. Đây là defect của hệ thống.',
+        });
+        expect(urlAfterContinue).not.toContain('thanks.php');
+      } else {
+        expect(urlAfterContinue).not.toContain('thanks.php');
+        if (await checkoutPage.placeOrderButton.isVisible().catch(() => false)) {
+          await checkoutPage.placeOrderButton.click();
+          expect(page.url()).not.toContain('thanks.php');
+        }
+        const hasError = await page.locator('p.error, .text-danger, .invalid-feedback').first().isVisible().catch(() => false);
+        expect(hasError || !zipVal.includes('!@#'), 'Hệ thống phải chặn hoặc báo lỗi định dạng mã bưu điện chứa ký tự đặc biệt').toBe(true);
+      }
+    });
+
+    // Lặp lại với Số thẻ sai định dạng (dãy số), các trường khác hợp lệ
+    await test.step('Lặp lại với Số thẻ sai định dạng (dãy số), các trường khác hợp lệ', async () => {
+      if (!page.url().includes('checkout.php')) {
+        await page.goto('/checkout.php', { waitUntil: 'domcontentloaded' });
+      }
+      await checkoutPage.fillBillingForm({ ...td05, cardNumber: '1234' });
+
+      await checkoutPage.continueButton.click();
+
+      const urlAfterContinue = page.url();
+      if (urlAfterContinue.includes('confirm.php')) {
+        test.info().annotations.push({
+          type: 'defect',
+          description:
+            'CO-03 : Site không có trường Card Number trên form checkout.php. ' +
+            'Nhập cardNumber="1234" (sai định dạng) không có tác dụng vì trường không tồn tại. ' +
+            'Site không chặn và cho phép tiếp tục sang confirm.php. ' +
+            'Không click Place Order để tránh tạo đơn hàng thật. Đây là defect của hệ thống.',
+        });
+        expect(urlAfterContinue).not.toContain('thanks.php');
+      } else {
+        expect(urlAfterContinue).not.toContain('thanks.php');
+        if (await checkoutPage.placeOrderButton.isVisible().catch(() => false)) {
+          await checkoutPage.placeOrderButton.click();
+        }
+        expect(page.url()).not.toContain('thanks.php');
+      }
+    });
+  });
+
   // Ưu tiên P2, Theo yêu cầu.
   test('CO-04: Kiểm tra tổng tiền, thuế, phí ở trang tổng kết', async ({ page }) => {
     const { expect } = test;

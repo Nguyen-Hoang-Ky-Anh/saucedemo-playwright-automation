@@ -67,6 +67,11 @@ export async function addTwoDistinctProducts(page: Page): Promise<[AddedProduct,
   return [products[0], products[1]];
 }
 
+export async function addOneProduct(page: Page): Promise<AddedProduct> {
+  const products = await addDistinctProducts(page, 1);
+  return products[0];
+}
+
 export function expectCartProduct(
   actual: CartProduct,
   expected: AddedProduct,

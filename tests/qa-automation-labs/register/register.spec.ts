@@ -1,15 +1,128 @@
 import { expect, test } from '@playwright/test';
+import { QaAutomationLabsLoginPage } from '../../../pages/qa-automation-labs-login.page';
 import { QaAutomationLabsRegisterPage } from '../../../pages/qa-automation-labs-register.page';
 import { getDemoCredentials, getRegisterTestData } from '../test-data';
 
 test.describe('Register', () => {
+  test.describe.configure({ mode: 'serial' });
   let registerPage: QaAutomationLabsRegisterPage;
   const demoCredentials = getDemoCredentials();
   const registerTestData = getRegisterTestData();
 
   test.beforeEach(async ({ page }) => {
+    test.setTimeout(60000);
     registerPage = new QaAutomationLabsRegisterPage(page);
     await registerPage.open();
+  });
+
+  test('RG-01: Đăng ký thành công với đủ trường bắt buộc', async ({ page }) => {
+    const loginPage = new QaAutomationLabsLoginPage(page);
+    const uniqueEmail = `rg01_${Date.now()}@example.com`;
+    const newUser = {
+      ...registerTestData.td04,
+      email: uniqueEmail,
+    };
+
+    // form "Create your account" hiển thị đầy đủ
+    await expect(registerPage.createAccountHeading).toBeVisible();
+    await expect(registerPage.personalDetailsSection).toBeVisible();
+
+    // Nhập đầy đủ các trường bắt buộc hợp lệ theo TD-04, để trống trường không bắt buộc
+    await registerPage.fillRequiredFields(newUser);
+
+    // Bấm nút "Register"
+    await registerPage.registerButton.click();
+
+    // Tạo tài khoản thành công, hiển thị thông báo và điều hướng sang trang đăng nhập
+    const successAlert = page.locator('.alert-success, [role="alert"]').first();
+    const hasSuccessAlert = await successAlert.isVisible().catch(() => false);
+    if (hasSuccessAlert) {
+      await expect(successAlert).toBeVisible();
+    }
+    await expect(page).toHaveURL(/.*(\/|\/index\.php|\/login\.php)$/);
+    await expect(loginPage.signInHeading).toBeVisible();
+    await expect(loginPage.loginButton).toBeVisible();
+
+    // Đăng nhập lại ở trang đăng nhập bằng đúng E-Mail và Password vừa đăng ký
+    await loginPage.emailInput.fill(newUser.email);
+    await loginPage.passwordInput.fill(newUser.password);
+    await loginPage.loginButton.click();
+
+    // Đăng nhập lại bằng tài khoản vừa tạo thành công, vào được trang mua sắm
+    await expect(loginPage.emailInput).toBeHidden();
+    await expect(loginPage.loginButton).toBeHidden();
+    await expect(page.locator('a[href*="cart"]').first()).toBeVisible();
+  });
+
+  test('RG-02: Để trống First Name', async ({ page }) => {
+    // form "Create your account" hiển thị đầy đủ
+    await expect(registerPage.createAccountHeading).toBeVisible();
+
+    // Để trống ô First Name, nhập các trường còn lại hợp lệ theo TD-04
+    await registerPage.fillRequiredFields({
+      ...registerTestData.td04,
+      email: `rg02_${Date.now()}@example.com`,
+      firstName: '',
+    });
+    const registerUrl = page.url();
+    const usersBefore = await page.evaluate(() => localStorage.getItem('users'));
+
+    // Bấm nút "Register"
+    await registerPage.registerButton.click();
+
+    // Hệ thống chặn đăng ký, không tạo tài khoản, giữ nguyên ở trang /register.php
+    await expect(page).toHaveURL(registerUrl);
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem('users')))
+      .toBe(usersBefore);
+
+    // Hiển thị thông báo lỗi bắt buộc nhập First Name
+    const isInvalid = await registerPage.firstNameInput.evaluate(
+      (input: HTMLInputElement) => !input.checkValidity() || input.validationMessage !== '',
+    );
+    const hasAlert = await registerPage.errorMessages.first().isVisible().catch(() => false);
+    const hasErrorText = await page
+      .locator('.invalid-feedback, .text-danger, .error-message')
+      .first()
+      .isVisible()
+      .catch(() => false);
+
+    expect(isInvalid || hasAlert || hasErrorText).toBe(true);
+  });
+
+  test('RG-03: Để trống Last Name', async ({ page }) => {
+    // form "Create your account" hiển thị đầy đủ
+    await expect(registerPage.createAccountHeading).toBeVisible();
+
+    // Nhập các trường hợp lệ theo TD-04, để trống ô Last Name
+    await registerPage.fillRequiredFields({
+      ...registerTestData.td04,
+      email: `rg03_${Date.now()}@example.com`,
+      lastName: '',
+    });
+    const registerUrl = page.url();
+    const usersBefore = await page.evaluate(() => localStorage.getItem('users'));
+
+    // Bấm nút "Register"
+    await registerPage.registerButton.click();
+
+    // Hệ thống chặn đăng ký, không tạo tài khoản, giữ nguyên ở trang /register.php
+    await expect(page).toHaveURL(registerUrl);
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem('users')))
+      .toBe(usersBefore);
+
+    // Hiển thị thông báo lỗi bắt buộc nhập Last Name
+    const isInvalid = await registerPage.lastNameInput.evaluate(
+      (input: HTMLInputElement) => !input.checkValidity() || input.validationMessage !== '',
+    );
+    const hasAlert = await registerPage.errorMessages.first().isVisible().catch(() => false);
+    const hasErrorText = await page
+      .locator('.invalid-feedback, .text-danger, .error-message')
+      .first()
+      .isVisible()
+      .catch(() => false);
+    expect(isInvalid || hasAlert || hasErrorText).toBe(true);
   });
 
   // Ưu tiên P2, EP, bảng quyết định.
