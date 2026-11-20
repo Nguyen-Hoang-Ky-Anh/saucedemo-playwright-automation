@@ -39,6 +39,7 @@ test.describe('State Test Cases', () => {
                                                                                                                         }) => {
         // Ghi lại các sản phẩm đang có ở trang tổng kết trước khi Cancel
         const itemNames = page.locator('[data-test="inventory-item-name"]');
+        await expect(itemNames.first()).toBeVisible();
         const namesBefore = await itemNames.allInnerTexts();
         expect(namesBefore.length).toBeGreaterThan(0);
 
@@ -160,6 +161,7 @@ test.describe('State Test Cases', () => {
                                                                                         }) => {
         await expect(page).toHaveURL(/checkout-step-two\.html/);
         const itemNames = page.locator('[data-test="inventory-item-name"]');
+        await expect(itemNames.first()).toBeVisible();
         const namesBefore = await itemNames.allInnerTexts();
         const totalBefore = await checkoutOverviewPage.getTotal();
 
@@ -167,7 +169,7 @@ test.describe('State Test Cases', () => {
 
         await expect(page).toHaveURL(/checkout-step-two\.html/);
         await expect(page.locator('[data-test="title"]')).toHaveText('Checkout: Overview');
-        expect(await itemNames.allInnerTexts()).toEqual(namesBefore);
+        await expect(itemNames).toHaveText(namesBefore);
         expect(await checkoutOverviewPage.getTotal()).toBe(totalBefore);
     });
 });
