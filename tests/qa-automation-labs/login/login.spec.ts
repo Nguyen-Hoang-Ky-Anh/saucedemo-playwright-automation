@@ -204,6 +204,30 @@ test.describe('Login', () => {
 
   });
 
+  test('LG-11: Kiểm tra chức năng đăng xuất',async ({page})=>{
+    const cartPage=  new QaAutomationLabsCartPage(page);
+    await loginPage.emailInput.fill(demoCredentials.email);
+    await loginPage.passwordInput.fill(demoCredentials.password);
+    await loginPage.loginButton.click();
+    await expect(page,'Đăng nhập thành công phải chuyển hướng tới trang Shop.').toHaveURL(/\/shop\.php(?:[?#]|$)/);
+
+    await test.step('1) Tại giao diện sau khi đăng nhập bấm đăng xuất.',async ()=>{
+      const logout = page.getByRole('link',{name: /logout|sign out/i}).or(page.getByRole('button', { name: /logout|sign out/i })).or(page.locator('a[href*="logout"]'));
+      await expect(logout.first(),'Logout phải hiển thị sau khi đăng nhập.').toBeVisible();
+      await logout.click();
+      await expect(loginPage.signInHeading).toBeVisible();
+      await expect(loginPage.loginButton).toBeVisible();
+
+    });
+    await test.step('2) Thử nhập lại đường dẫn /cart.php để kiểm tra không thể truy cập khi chưa đăng nhập.',async ()=>{
+      await page.goto('/cart.php',{waitUntil:'domcontentloaded'});
+      await expect(page,'Chặn truy cập /cart.php sau khi đã đăng xuất.').not.toHaveURL(/\/cart\.php(?:[?#]|$)/);
+      await expect(loginPage.loginButton).toBeVisible();
+      await expect(cartPage.cartTotal).toBeHidden();
+    });
+
+  });
+
   test('LG-12: Link "Register Here"', async ({ page }) => {
     const registerPage = new QaAutomationLabsRegisterPage(page);
     await expect(loginPage.signInHeading).toBeVisible();
