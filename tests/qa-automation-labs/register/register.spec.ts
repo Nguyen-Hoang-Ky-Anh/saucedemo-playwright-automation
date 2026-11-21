@@ -457,4 +457,38 @@ test.describe('Register', () => {
     await registerPage.firstNameInput.fill('Nguyen');
     await expect(registerPage.firstNameCharacterCount).toHaveText('6 characters');
   });
+
+  test('RG-15: Kiểm tra chức năng chọn và bỏ chọn các Interests (Fashion, Electronics, Sports, Books)',async ({page}) => {
+    const loginPage = new QaAutomationLabsLoginPage(page);
+    const newUser = {...registerTestData.td04,
+      email: `rg15_short_${Date.now()}@example.com`};
+    await registerPage.fillRequiredFields(newUser);
+    await test.step('Tại mục Interest lần lượt tích chọn nhiều mục (Fashion, Electronics, Sports, Books).',async () => {
+      await registerPage.fashionCheckbox.check();
+      await registerPage.electronicsCheckbox.check();
+      await registerPage.sportsCheckbox.check();
+      await registerPage.booksCheckbox.check();
+
+      await expect(registerPage.fashionCheckbox).toBeChecked();
+      await expect(registerPage.electronicsCheckbox).toBeChecked();
+      await expect(registerPage.sportsCheckbox).toBeChecked();
+      await expect(registerPage.booksCheckbox).toBeChecked();
+    });
+    await test.step('Bỏ chọn một hoặc nhiều mục đã chọn.',async () => {
+      await registerPage.fashionCheckbox.uncheck();
+      await registerPage.electronicsCheckbox.uncheck();
+      await expect(registerPage.fashionCheckbox).not.toBeChecked();
+      await expect(registerPage.electronicsCheckbox).not.toBeChecked();
+    });
+    await test.step('Giữ lại các mục muốn chọn và bấm Register.',async () => {
+      await expect(registerPage.sportsCheckbox).toBeChecked();
+      await expect(registerPage.booksCheckbox).toBeChecked();
+      await registerPage.registerButton.click();
+      await expect(page,'Hệ thống phải chấp nhận và chuyển hướng về trang đăng nhập.').toHaveURL(/.*(\/|\/index\.php|\/login\.php)$/);
+
+    });
+    await expect(loginPage.signInHeading).toBeVisible();
+    await expect(loginPage.loginButton).toBeVisible();
+
+  });
 });
