@@ -31,6 +31,12 @@ export class QaAutomationLabsRegisterPage {
   readonly firstNameCharacterCount: Locator;
   readonly createAccountHeading: Locator;
   readonly personalDetailsSection: Locator;
+  readonly fashionCheckbox: Locator;
+  readonly electronicsCheckbox: Locator;
+  readonly sportsCheckbox: Locator;
+  readonly booksCheckbox: Locator;
+  readonly profilePhotoInput: Locator;
+  readonly signInLink: Locator;
 
   constructor(private readonly page: Page) {
     this.firstNameInput = page.getByPlaceholder('First Name', { exact: true });
@@ -51,6 +57,12 @@ export class QaAutomationLabsRegisterPage {
     this.firstNameCharacterCount = page.getByText(/^\d+ characters?$/);
     this.createAccountHeading = page.getByRole('heading', { name: /create your account/i });
     this.personalDetailsSection = page.getByRole('heading', { name: /your personal details/i });
+    this.fashionCheckbox = page.getByRole('checkbox', { name: 'Fashion', exact: true }).or(page.locator('input[type="checkbox"][value="Fashion"]'));
+    this.electronicsCheckbox = page.getByRole('checkbox', { name: 'Electronics', exact: true }).or(page.locator('input[type="checkbox"][value="Electronics"]'));
+    this.sportsCheckbox = page.getByRole('checkbox', { name: 'Sports', exact: true }).or(page.locator('input[type="checkbox"][value="Sports"]'));
+    this.booksCheckbox = page.getByRole('checkbox', { name: 'Books', exact: true }).or(page.locator('input[type="checkbox"][value="Books"]'));
+    this.profilePhotoInput = page.locator('input[type="file"]');
+    this.signInLink = page.getByRole('link', { name: /sign in/i });
   }
 
   async open(retries = 3) {
