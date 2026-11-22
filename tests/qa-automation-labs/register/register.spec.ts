@@ -491,4 +491,74 @@ test.describe('Register', () => {
     await expect(loginPage.loginButton).toBeVisible();
 
   });
+  test('RG-16: Kiểm tra chức năng tải ảnh đại diện lên (Upload Profile Photo - trường tùy chọn)',async ({page}) => {
+    const loginPage = new QaAutomationLabsLoginPage(page);
+    const registerUrl = page.url();
+    const usersBefore = await page.evaluate(()=>localStorage.getItem('users'));
+    await registerPage.fillRequiredFields({
+      ...registerTestData.td04,email: `rg16_${Date.now()}@example.com`,
+    });
+
+    await test.step('Tại mục Profile photo tải lên mục không phải ảnh và bấm Register.',async () => {
+
+      await registerPage.profilePhotoInput.setInputFiles({
+        name: 'not-an-image.txt',
+        mimeType:'text/plain',
+        buffer: Buffer.from('Noi dung file van ban khong phai hinh anh'),
+      });
+      await registerPage.registerButton.click();
+
+      const isInvalid = await registerPage.profilePhotoInput.evaluate(
+          (input: HTMLInputElement) => !input.checkValidity() || input.validationMessage !== '',
+      );
+      const hasAlert = await registerPage.errorMessages.first().isVisible().catch(() => false);
+      const hasErrorText = await page
+          .locator('.invalid-feedback, .text-danger, .error-message')
+          .first()
+          .isVisible()
+          .catch(() => false);
+
+      expect(isInvalid || hasAlert || hasErrorText).toBe(true);
+      await expect(page).toHaveURL(registerUrl);
+      await expect
+          .poll(() => page.evaluate(() => localStorage.getItem('users')))
+          .toBe(usersBefore);
+    });
+
+    await test.step('Thay thế bằng một file ảnh hợp lệ và bấm Register.',async () => {
+
+      await registerPage.profilePhotoInput.setInputFiles({
+        name: 'profile-photo.png',
+        mimeType:'image/png',
+        buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
+      });
+      const uploadFile = await registerPage.profilePhotoInput.evaluate((input:HTMLInputElement)=>input.files?.[0]?.name??'');
+      expect(uploadFile).toBe('profile-photo.png');
+
+      await registerPage.registerButton.click();
+      await expect(page).toHaveURL(/.*(\/|\/index\.php|\/login\.php)$/);
+      await expect(loginPage.signInHeading).toBeVisible();
+      await expect(loginPage.loginButton).toBeVisible();
+
+    });
+
+  });
+  test('RG-17: Kiểm tra diều hướng khi bấm vào link sign in tại trang đăng ký',async ({page}) => {
+    const loginPage = new QaAutomationLabsLoginPage(page);
+
+    await test.step('1) Tìm liên kết Sign in trong biểu mẫu đăng ký trên trang (/register.php).',async () => {
+      await expect(registerPage.signInLink).toBeVisible();
+    });
+
+    await test.step('2) Bấm vào link Sign in và kiểm tra chuyển về trang đăng nhập.',async () => {
+       await registerPage.signInLink.click();
+       await expect(page).toHaveURL(/.*(\/|\/index\.php|\/login\.php)$/);
+
+       await expect(loginPage.signInHeading).toBeVisible();
+       await expect(loginPage.emailInput).toBeVisible();
+       await expect(loginPage.passwordInput).toBeVisible();
+       await expect(loginPage.loginButton).toBeVisible();
+    });
+  });
+
 });
