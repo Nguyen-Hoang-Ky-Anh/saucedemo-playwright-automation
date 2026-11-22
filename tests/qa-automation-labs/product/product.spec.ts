@@ -355,4 +355,63 @@ test.describe('Product', () => {
       expect(optionLabels.some((text) => /price\W*high\W+to\W+low/i.test(text))).toBe(true);
     });
   });
+
+  test('PR-09: Kiểm tra chức năng hiển thị chi tiết sản phẩm và đối chiếu tên giá khi bấm vào một sản phẩm',async ({page}) => {
+    let selectedName ='';
+    let selectedHref:string|null = null;
+    let selectedPrice = 0;
+    await test.step('1) Chọn một sản phẩm bất kỳ trong trang sản phẩm và ghi nhận tên cùng giá bán hiển thị.',async () => {
+      await expect(page).toHaveURL(/\/mens-wear\.php(?:[?#]|$)/);
+      const productCard = page.locator('.product-item').first();
+      await expect(productCard, 'Phải có ít nhất một sản phẩm hiển thị trong danh mục.').toBeVisible();
+
+      const productLink = productCard
+          .locator('a[href^="product.php"]')
+          .filter({ hasText: /\S/ })
+          .first();
+      await expect(productLink).toBeVisible();
+
+      selectedName =(await productLink.innerText()).trim();
+      selectedHref = await productLink.getAttribute('href');
+      expect(selectedName,'Tên sản phẩm không được rỗng').not.toBe('');
+
+      const cardText = await productCard.innerText();
+      const priceMatch= cardText.match(/\$\s*([\d,]+(?:\.\d{1,2})?)/);
+      expect(priceMatch, 'Sản phẩm "${selectedName}" phải hiển thị giá bán hợp lệ.').not.toBeNull();
+      selectedPrice = Number(priceMatch![1].replaceAll('.',''));
+
+    });
+
+    await test.step('2) Bấm sản phẩm đã chọn.',async () => {
+      const targetLink = page.locator('.product-item').first().locator('a[href^="product.php"]').filter({ hasText: /\S/ }).first();
+      await targetLink.click();
+
+    });
+
+    await test.step('3) Quan sát giao diện và thông tin trang được chuyển đến.',async () => {
+      await expect(page).toHaveURL(/\/product\.php(?:[?#]|$)/);
+
+      if(selectedHref){
+        expect(page.url(),'URL trang chi tiết phải khớp với liên kết sản phẩm vừa chọn.').toContain(selectedHref);
+      }
+      const detailTitle = page
+          .locator('h1, h2, h3, h4, h5')
+          .filter({ hasText: selectedName })
+          .first()
+          .or(page.getByText(selectedName, { exact: true }).first());
+      await expect(detailTitle.first()).toBeVisible();
+
+      const detailArea = await page.evaluate(()=>{
+        const clone = document.body.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll('.product-item, header, nav, footer').forEach((ex) =>ex.remove());
+        return clone.innerText;
+
+      });
+
+      const detailPrices = [...detailArea.matchAll(/\$\s*([\d,]+(?:\.\d{1,2})?)/g)].map((match) => Number(match[1].replaceAll(',', '')),);
+      expect(detailPrices,`Trang chi tiết phải hiển thị đúng giá $${selectedPrice} của sản phẩm "${selectedName}".`).toContain(selectedPrice);
+
+    });
+
+  });
 });
