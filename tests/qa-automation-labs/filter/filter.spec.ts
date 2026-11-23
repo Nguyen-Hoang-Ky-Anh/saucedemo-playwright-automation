@@ -386,4 +386,51 @@ test.describe('Filter', () => {
       );
     });
   });
+
+  test('FL-07: Kiểm tra bộ lọc khi không có sản phẩm phù hợp',async ()=>{
+    let finalProducts: DisplayedProduct[] = [];
+    await test.step('1) Chọn nhiều điều kiện lọc để không có sản phẩm nào có thể đáp ứng.',async ()=>{
+      await filterPage.selectFilterOption('Color', FILTERS.color);
+      await filterPage.selectFilterOption('Size','Double Extra Large');
+      await filterPage.selectFilterOption('Type','Footwear');
+      await filterPage.selectFilterOption('Price','$401 - $500');
+      await filterPage.waitForProductListToSettle();
+      finalProducts = await filterPage.readProducts();
+
+    });
+    await test.step('2) Quan sát giao diện khi thực hiện việc chọn nhiều bộ lọc đồng thời.',async ()=>{
+      expect(finalProducts).toHaveLength(0);
+      await filterPage.expectEmptyResults();
+
+    });
+  });
+  test('Kiểm tra chức năng bỏ chọn bộ lọc đang được chọn',async ({page}) => {
+    await test.step('1) Quan sát các sản phẩm khi đã chọn bộ lọc.',async ()=>{
+      expect(initialSnapshot.count).toBeGreaterThan(0);
+      await filterPage.selectFilterOption('Color', FILTERS.color);
+      await filterPage.selectFilterOption('Size',FILTERS.size);
+      await filterPage.waitForProductListToSettle();
+
+      const filteredSnapshot = snapshotProducts(await filterPage.readProducts());
+      assertSnapshotOnlyNarrows(initialSnapshot, filteredSnapshot, 'Sau khi áp dụng bộ lọc Type và Color');
+
+    });
+    await test.step('2) Bỏ tất cả các bộ lọc đã chọn.',async ()=>{
+      await filterPage.deselectFilterOption('Color', FILTERS.color);
+      await filterPage.deselectFilterOption('Size',FILTERS.size);
+      await filterPage.waitForProductListToSettle();
+
+    });
+
+    await test.step('3) Quan sát sản phẩm trong trang.',async () => {
+      await filterPage.expectDefaultFilters();
+      const resetSnap = snapshotProducts(await filterPage.readProducts());
+      expect(resetSnap.count).toBe(initialSnapshot.count);
+      expect(resetSnap.names).toEqual(initialSnapshot.names);
+
+    });
+
+
+  })
+
 });
