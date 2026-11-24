@@ -126,4 +126,64 @@ test.describe('GUI', () => {
       }
     });
   });
+
+  test('GUI-03: Kiểm tra trên giao diện trên điện thoại có phần menu mở rộng (có menu ☰)', async ({page, browserName,}) => {
+    test.skip(browserName !== 'chromium', 'GUI-03 chỉ chạy trên Chromium.');
+    test.info().annotations.push({type: 'Ưu tiên', description: 'P3'}, {type: 'Kỹ thuật', description: 'GUI'},);
+
+    const loginPage = new QaAutomationLabsLoginPage(page);
+    const menuToggleButton = page.locator('button.navbar-toggler').or(page.getByRole('button', {name: /toggle navigation|menu/i})).first();
+    const aboutLink = page.locator('header, nav').getByRole('link', { name: /^about$/i }).first();
+
+    // Điều kiện tiên quyết: Thiết lập viewport điện thoại (375x812 px) và mở trang web demo
+    await page.setViewportSize({ width: 375, height: 812 });
+    await loginPage.open();
+
+    await test.step('1) Quan sát tổng thể bố cục, văn bản, hình ảnh và thanh điều hướng.', async () => {
+      await expect(page.locator('header, nav').first(), 'Thanh điều hướng phải hiển thị trên màn hình điện thoại.').toBeVisible();
+      await expect(loginPage.signInHeading, 'Nội dung chính trên trang phải hiển thị rõ ràng.').toBeVisible();
+      await expect(menuToggleButton, 'Biểu tượng menu thu gọn (☰) phải hiển thị trên màn hình điện thoại.').toBeVisible();
+      await expect(aboutLink, 'Danh sách menu mở rộng phải đang thu gọn trước khi bấm nút ☰.').toBeHidden();
+
+    });
+
+    await test.step('2) Kiểm tra độ vừa vặn theo chiều ngang màn hình.', async () => {
+      const layoutCheck = await page.evaluate(() => {
+        const viewportWidth = document.documentElement.clientWidth;
+        const documentWidth = Math.max(
+            document.documentElement.scrollWidth,
+            document.body?.scrollWidth ?? 0,
+        );
+        const overflowingElements = Array.from(document.querySelectorAll('header, nav, main, form, section'))
+            .filter((el) => {
+              const rect = el.getBoundingClientRect();
+              return rect.width > 0 && (rect.left < -1 || rect.right > viewportWidth + 1);
+            }).map((el) => `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}`);
+
+        return {hasHorizontalOverflow: documentWidth > viewportWidth, documentWidth, viewportWidth, overflowingElements,
+        };
+      });
+
+      expect(layoutCheck.hasHorizontalOverflow, `Giao diện không được tràn cuộn ngang (documentWidth=${layoutCheck.documentWidth}, viewportWidth=${layoutCheck.viewportWidth}).`).toBe(false);
+      expect(layoutCheck.overflowingElements, 'Không có khối giao diện nào vượt quá chiều ngang màn hình 375px.').toEqual([]);
+
+    });
+
+    await test.step('3) Bấm vào biểu tượng menu (☰) và chọn một mục điều hướng bên trong.', async () => {
+      await menuToggleButton.click();
+      await expect(aboutLink, 'Menu (☰) phải mở ra sau khi bấm lần 1.').toBeVisible();
+
+      await menuToggleButton.click();
+      await expect(aboutLink, 'Menu (☰) phải đóng lại bình thường sau khi bấm lần 2.').toBeHidden();
+
+      // Mở lại menu (☰) và chọn một mục điều hướng công khai bên trong ("About")
+      await menuToggleButton.click();
+      await expect(aboutLink, 'Mục điều hướng "About" bên trong menu phải hiển thị.').toBeVisible();
+
+      await aboutLink.click();
+      await expect(page, 'Hệ thống phải chuyển hướng sang trang /about.php.').toHaveURL(/\/about(?:\.php|\/)?(?:[?#]|$)/,);
+      await expect(page.locator('body')).not.toBeEmpty();
+    });
+  });
+
 });
