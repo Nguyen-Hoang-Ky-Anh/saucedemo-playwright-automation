@@ -314,6 +314,53 @@ test.describe('Cart', () => {
     });
   });
 
+  test.describe('CT-08', () => {
+     test.beforeEach(async ({ page }) => {
+         await addOneProduct(page);
+         const cartPage = new QaAutomationLabsCartPage(page);
+         await cartPage.openCartByIcon();
+         await expect(page).toHaveURL(/\/cart\.php(?:[?#]|$)/);
+         await expect(cartPage.cartProducts,'Điều kiện trước CT-08 cần ít nhất 1 sản phẩm trong giỏ').toHaveCount(1);
+
+     });
+     test('CT-08: Kiểm tra chức năng tải lại trang khi giỏ hàng đang có sản phẩm được thêm vào.',async ({page})=>{
+         const cartPage = new QaAutomationLabsCartPage(page);
+         let badgeBefore=0;
+         let productBefore: Awaited<ReturnType<typeof cartPage.readProducts>> = [];
+         let totalBefore = 0;
+
+         await test.step('1) Quan sát số lượng sản phẩm được hiện trên icon và các sản phẩm hiện có trong trang giỏ hàng.',async ()=>{
+             badgeBefore = await cartPage.getCartBadgeCount();
+             productBefore = await cartPage.readProducts();
+             totalBefore  = await cartPage.getTotalCents();
+
+             expect(badgeBefore,'Số lượng hiển thị trên icon giỏ hàng trước khi tải lại phải lớn hơn 0.').toBeGreaterThan(0);
+             expect(productBefore.length,'Giỏ hàng phải có ít nhất 1 sản phẩm trước khi tải lại.').toBeGreaterThan(0);
+             expect(totalBefore,'Tổng tiền đơn hàng trước khi tải lại phải lớn hơn 0.').toBeGreaterThan(0);
+
+         });
+
+         await test.step('2) Thực hiện tải lại trang refresh hoặc F5.',async ()=>{
+            await page.reload({waitUntil: 'domcontentloaded'});
+            await expect(page).toHaveURL(/\/cart\.php(?:[?#]|$)/);
+
+         });
+         await test.step('3) Quan sát trang giỏ hàng khi đã thực hiện tải lại trang.',async ()=>{
+             await expect(cartPage.cartProducts,'Tất cả các sản phẩm sau khi reload phải dữ nguyên').toHaveCount(productBefore.length);
+
+             const badgeAfter=await cartPage.getCartBadgeCount();
+             const productAfter = await cartPage.readProducts();
+             const totalAfter = await cartPage.getTotalCents();
+
+             expect(badgeAfter).toBe(badgeBefore);
+             expect(productAfter).toEqual(productBefore);
+             expect(totalAfter).toBe(totalBefore);
+
+         });
+     });
+
+  });
+
   test.describe('CT-09', () => {
     test.beforeEach(async ({ page }) => {
       test.setTimeout(120000);

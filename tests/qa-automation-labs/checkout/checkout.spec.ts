@@ -348,6 +348,39 @@ test.describe('Checkout', () => {
     });
   });
 
+  test('CO-06: Kiểm tra giỏ hàng sau khi đặt hàng thành công.',async ({page})=>{
+    const {expect}= test;
+    const cartPage = new QaAutomationLabsCartPage(page);
+    const checkoutPage= new QaAutomationLabsCheckoutPage(page);
+    let td05 = getCheckoutTestData().td05;
+
+    await test.step('1) Nhập đầy đủ thông tin theo TD-05.',async ()=>{
+      await checkoutPage.fillBillingForm(td05);
+    });
+
+    await test.step('2) Bấm nút xác nhận đặt hàng trong trang thanh toán.',async ()=>{
+      await checkoutPage.continueButton.click();
+      await checkoutPage.clickPlaceOrder();
+      await expect(page,'Hệ thống phải hoàn tất đặt hàng và chuyển sang trang xác nhận (/thanks.php).').toHaveURL(/\/thanks\.php(?:[?#]|$)/);
+      await expect(page.getByText(/thank\s*you\s*for\s*your\s*order/i)).toBeVisible();
+
+    });
+
+    await test.step('3) Quan sát icon giỏ hàng trên thanh header.',async ()=>{
+      await expect.poll(()=>cartPage.getCartBadgeCount(),{message: 'Icon giỏ hàng trên thanh header phải được cập nhật về 0 sau khi đặt hàng thành công.'}).toBe(0)
+    });
+
+    await test.step('4) Bấm vào icon giỏ hàng kiểm tra chi tiết bên trong giỏ hàng.',async ()=>{
+      await cartPage.openCartByIcon();
+      await expect(page).toHaveURL(/\/cart\.php(?:[?#]|$)/);
+      await expect(cartPage.cartProducts,'Không có sản phẩm nào trong giỏ').toHaveCount(0);
+      await expect(cartPage.removeButtons,'Không còn nút xóa sản phẩm').toHaveCount(0);
+
+    });
+
+  });
+
+
   test('CO-07: Kiểm tra xem lịch sử đơn hàng sau khi đặt hàng thành công (nếu có trang Orders)', async ({
                                                                                                           page,
                                                                                                         }) => {
