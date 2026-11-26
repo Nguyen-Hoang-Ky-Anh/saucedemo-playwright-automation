@@ -19,7 +19,7 @@ export default defineConfig({
   fullyParallel: !isT20,
   forbidOnly: !!process.env.CI,
   retries: isT20 ? 0 : process.env.CI ? 2 : 0,
-  workers: isT20 ? 1 : process.env.CI ? 1 : undefined,
+  workers: isT20 ? 1 : process.env.CI ? 2 : undefined,
   reporter: isT20
       ? [
         ['html', { open: 'never' }],
@@ -58,6 +58,18 @@ export default defineConfig({
           name: 'chromium',
           testDir: sauceDemoTestDir,
           use: chromium,
+        },
+        {
+          name: 'firefox',
+          testDir: sauceDemoTestDir,
+          grep: /@smoke/,
+          use: { ...devices['Desktop Firefox'] },
+        },
+        {
+          name: 'webkit',
+          testDir: sauceDemoTestDir,
+          grep: /@smoke/,
+          use: { ...devices['Desktop Safari'] },
         },
         {
           name: 'qaautomationlabs',

@@ -2,7 +2,7 @@ import { test, expect } from '../../../fixtures/test.fixture';
 import { PRODUCT_SLUGS, addToCartId, removeId, BUTTON_TEXT } from '../../../data/constants';
 
 test.describe('Cart - Flow', () => {
-    test('CT-01: should change button to Remove and show cart badge as 1 when adding 1 item', async ({ loggedInPage }) => {
+    test('CT-01: should change button to Remove and show cart badge as 1 when adding 1 item', { tag: '@smoke' }, async ({ loggedInPage }) => {
         const { inventoryPage } = loggedInPage;
         const product = PRODUCT_SLUGS[0];
 
@@ -28,7 +28,7 @@ test.describe('Cart - Flow', () => {
     });
 
     // Kiểm tra đủ tên, giá, số lượng (1) và nút Remove theo detail
-    test('CT-03: should navigate to cart page and display correct item details after adding an item', async ({
+    test('CT-03: should navigate to cart page and display correct item details after adding an item', { tag: '@smoke' }, async ({
                                                                                                                  page,
                                                                                                                  loggedInPage,
                                                                                                              }) => {

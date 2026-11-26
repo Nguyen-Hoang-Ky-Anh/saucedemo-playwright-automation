@@ -13,6 +13,7 @@
     "test:all": "playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
+    "test:smoke": "playwright test --grep @smoke --project=chromium --project=firefox --project=webkit",
     "test:report": "playwright show-report"
   },
   "devDependencies": {

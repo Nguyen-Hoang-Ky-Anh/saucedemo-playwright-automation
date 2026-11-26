@@ -22,13 +22,15 @@ test.describe('GUI and UI baseline and performance', ()=>{
         await expect(loginPage.loginButton).toBeFocused();
     });
 
-    test('UI-01: should match login page baseline screenshot', async({page, loginPage}) =>{
+    test('UI-01: should match login page baseline screenshot', async({page, loginPage, browserName}) =>{
+        test.skip(browserName !== 'chromium', 'UI-01 chỉ chạy trên Chromium.');
         await loginPage.navigateTo('/');
         // so sánh ảnh chụp với ảnh baseline trang đăng nhập
         await expect(page).toHaveScreenshot('login-page-baseline.png');
     });
 
-    test('UI-02: should match inventory page baseline screenshot',async({page,loggedInPage})=>{
+    test('UI-02: should match inventory page baseline screenshot',async({page,loggedInPage,browserName})=>{
+        test.skip(browserName !== 'chromium', 'UI-02 chỉ chạy trên Chromium.');
         const {inventoryPage} = loggedInPage;
         //so sánh ảnh chụp chụp với ảnh baseline trang sản phẩm đảm bảo vào thì có sản phẩm trước rồi mới so sánh
         await expect(inventoryPage.inventoryItems.first()).toBeVisible();
