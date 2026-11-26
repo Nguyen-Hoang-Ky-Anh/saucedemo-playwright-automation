@@ -9,7 +9,7 @@ test.describe('Authentication - Login Flow', () => {
         await loginPage.open();
     });
 
-    test('LG-01: should login successfully with standard_user', async ({
+    test('LG-01: should login successfully with standard_user', { tag: '@smoke' }, async ({
                                                                            page,
                                                                            loginPage,
                                                                            inventoryPage,
@@ -22,7 +22,7 @@ test.describe('Authentication - Login Flow', () => {
         await expect(inventoryPage.titleHeader).toHaveText('Products');
     });
 
-    test('LG-02: should show error when logging in with locked_out_user', async ({
+    test('LG-02: should show error when logging in with locked_out_user', { tag: '@smoke' }, async ({
                                                                                      page,
                                                                                      loginPage,
                                                                                  }) => {
@@ -35,7 +35,7 @@ test.describe('Authentication - Login Flow', () => {
         await expect(loginPage.errorMessage).toHaveText(ERROR_MESSAGES.LOCKED_OUT_USER);
     });
 
-    test('LG-03: should show error when logging in with wrong password', async ({
+    test('LG-03: should show error when logging in with wrong password', { tag: '@smoke' }, async ({
                                                                                     page,
                                                                                     loginPage,
                                                                                 }) => {

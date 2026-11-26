@@ -44,7 +44,7 @@ test.describe('Checkout - Flow', () => {
     // Tiền điều kiện từ fixture checkoutInformationPage: đã đăng nhập, thêm hàng, bấm checkout đến Step 1
     // (tương ứng các bước 1-4 của test case detail)
 
-    test('CO-01: should complete full checkout flow successfully', async ({ page, checkoutInformationPage }) => {
+    test('CO-01: should complete full checkout flow successfully', { tag: '@smoke' }, async ({ page, checkoutInformationPage }) => {
         // Bước 5: Nhập đầy đủ First Name, Last Name, Postal Code hợp lệ (TD-05) rồi Continue
         await checkoutInformationPage.fillCustomerInformation(
             CHECKOUT_INFO.FIRST_NAME,

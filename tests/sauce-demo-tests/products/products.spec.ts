@@ -1,7 +1,7 @@
 import { test, expect } from '../../../fixtures/test.fixture';
 
 test.describe('Products Inventory Feature (PR-01 to PR-07)', () => {
-  test('PR-01: Kiểm tra trang sản phẩm hiển thị đủ số lượng sản phẩm', async ({ loggedInPage, page }) => {
+  test('PR-01: Kiểm tra trang sản phẩm hiển thị đủ số lượng sản phẩm', { tag: '@smoke' }, async ({ loggedInPage, page }) => {
     const { inventoryPage } = loggedInPage;
 
     // Điều kiện tiên quyết: Đã đăng nhập và đang ở trang sản phẩm (/inventory.html)
